@@ -26,3 +26,12 @@
 *.exe
 *.out
 *.app
+
+*.sln
+*.suo
+*.vcxproj.filters
+*.vcxproj.user
+*.vcxproj
+*.sdf
+*.tlog
+*.log

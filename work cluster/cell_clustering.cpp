@@ -34,10 +34,6 @@
 #include <cmath>
 //#include "getopt.h"
 #include "util.hpp"
-#ifndef __clik
-#include <cilk/cilk_stub.h>
-#endif*
-#include <cilk/cilk.h>
 
 //#include <clik/clik.h>
 
@@ -282,8 +278,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
         //i2 = std::min((int)floor(posAll[c][1]*Len),(L-1));
         //i3 = std::min((int)floor(posAll[c][2]*Len),(L-1));
 		inum[0:2] = std::min((int)floor(posAll[c][0:2] * Len), (L - 1)); 
-		up[0:2] = std::min((i[0:2] + 1), L - 1);
-        down[0:2] = std::max((i[0:2]-1),0);
+		up[0:2] = std::min((inum[0:2] + 1), L - 1);
+        down[0:2] = std::max((inum[0:2]-1),0);
 
         gradSub1[0] = (Conc[0][up[0]][inum[1]][inum[2]]-Conc[0][down[0]][inum[1]][inum[2]])*Len/((float)(up[0]-down[0]));
         gradSub1[1] = (Conc[0][inum[0]][up[1]][inum[2]]-Conc[0][inum[0]][down[1]][inum[2]])*Len/((float)(up[1]-down[1]));

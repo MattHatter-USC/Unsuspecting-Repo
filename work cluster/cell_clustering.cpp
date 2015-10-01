@@ -289,9 +289,9 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
         gradSub1[1] = (Conc[0][inum[0]][up[1]][inum[2]]-Conc[0][inum[0]][down[1]][inum[2]])*Len/((float)(up[1]-down[1]));
         gradSub1[2] = (Conc[0][inum[0]][inum[1]][up[2]]-Conc[0][inum[0]][inum[1]][down[2]])*Len/((float)(up[2]-down[2]));
 
-		gradSub1[0] = (Conc[1][up[0]][inum[1]][inum[2]] - Conc[1][down[0]][inum[1]][inum[2]])*Len / ((float)(up[0] - down[0]));
-		gradSub1[1] = (Conc[1][inum[0]][up[1]][inum[2]] - Conc[1][inum[0]][down[1]][inum[2]])*Len / ((float)(up[1] - down[1]));
-		gradSub1[2] = (Conc[1][inum[0]][inum[1]][up[2]] - Conc[1][inum[0]][inum[1]][down[2]])*Len / ((float)(up[2] - down[2]));
+		gradSub2[0] = (Conc[1][up[0]][inum[1]][inum[2]] - Conc[1][down[0]][inum[1]][inum[2]])*Len / ((float)(up[0] - down[0]));
+		gradSub2[1] = (Conc[1][inum[0]][up[1]][inum[2]] - Conc[1][inum[0]][down[1]][inum[2]])*Len / ((float)(up[1] - down[1]));
+		gradSub2[2] = (Conc[1][inum[0]][inum[1]][up[2]] - Conc[1][inum[0]][inum[1]][down[2]])*Len / ((float)(up[2] - down[2]));
 
         normGrad1 = getrNorm(gradSub1);//I should reeally reeally try to vectorize this
         normGrad2 = getrNorm(gradSub2);

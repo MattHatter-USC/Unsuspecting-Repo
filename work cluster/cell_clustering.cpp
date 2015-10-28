@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
+#include <getopt.h>
 //#include "getopt.h"
 #include "util.hpp"
 
@@ -142,10 +143,8 @@ static void runDiffusionStep(float**** Conc, int L, float D) {
 	
     for (i1 = 0; i1 < L; i1++) {
         for (i2 = 0; i2 < L; i2++) {
-            //for (i3 = 0; i3 < L; i3++) {
-                tempConc[0][i1][i2][0:i3] = Conc[0][i1][i2][0:i3];
-                tempConc[1][i1][i2][0:i3] = Conc[1][i1][i2][0:i3];
-            //}
+			tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
+			tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
         }
     }
     int xUp, xDown, yUp, yDown, zUp, zDown;
@@ -373,7 +372,6 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
     getCriterion_sw.reset();
     // Returns 0 if the cell locations within a subvolume of the total system, comprising approximately targetN cells,
     // are arranged as clusters, and 1 otherwise.
-
     int i1, i2;
     int nrClose=0;      // number of cells that are close (i.e. within a distance of spatialRange)
     float currRDist;

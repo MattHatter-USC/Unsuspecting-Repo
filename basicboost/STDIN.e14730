@@ -1,0 +1,181 @@
+==================================================
+BUILD_HOST                          = 
+COMPILER_VERSION                    = icpc-20150815
+GLIBC_VERSION                       = 2.14.1
+BUILD_DATE                          = Oct 28 2015 04:59:31
+HOST                                = compute-102-3-mic0-k1om-Linux-2.6.38.8+mpss3.5.2
+CPU                                 = GenuineIntel 
+LD_PRELOAD                          = (null)
+CPUINFO                             = Family 11 Model 1 Stepping 2
+KMP_AFFINITY                        = (null)
+KMP_BLOCKTIME                       = (null)
+N_INITIAL                           = 1
+SPEED                               = 1.000000e-02
+T                                   = 500
+L                                   = 80
+D                                   = 3.000000e-01
+MU                                  = 1.000000e-01
+FINALNUMBERCELLS                    = 65536
+SPATIALSCALE                        = 5.000000e+00
+SPATIALRANGE                        = 1.240157e-01
+PATHTHRESHOLD                       = 2.000000e+00
+DIVTHRESHOLD                        = 16
+------------------------------------------
+INITIALIZATION_TIME                 = 4.086169e+05 s
+not brokennot broken1
+40, 40, 40if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+45, 38, 44if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+40, 43, 45if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+38, 50, 49if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+33, 46, 53if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+36, 48, 47if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+44, 47, 46if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+49, 50, 40if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+45, 56, 44if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+40, 56, 50if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+42, 62, 46if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+36, 65, 50if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+40, 70, 46if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+43, 76, 50if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+43, 73, 43if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+37, 72, 39if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+39, 65, 41if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+36, 63, 34if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+31, 69, 32if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+36, 75, 33if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+39, 79, 29if you dont mind36, 40, 37if you dont mind33, 38, 36if you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+39, 76, 3527, 43, 33if you dont mind30, 37, 32if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+40, 72, 2832, 49, 34if you dont mind25, 32, 36if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+42, 79, 2926, 55, 33if you dont mind20, 37, 39if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+36, 79, 2721, 60, 30if you dont mind14, 40, 43if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+41, 79, 338, 36, 40if you dont mind23, 54, 25if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+48, 79, 333, 40, 46if you dont mind31, 54, 27if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+43, 75, 3736, 50, 31if you dont mind10, 36, 44if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+37, 76, 4241, 47, 25if you dont mind5, 42, 41if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+40, 73, 360, 45, 35if you dont mind47, 45, 21if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+44, 77, 3039, 43, 22if you dont mind2, 37, 32if you dont mindif you dont mindnot broken2
+not broken3
+not broken4
+not broken5
+not broken1
+44, 79, 2447, 44, 24if you dont mind-5, 36, 30if you dont mindbash: line 1: 104040 Segmentation fault      ~/Unsuspecting-Repo/basicboost/cell_clustering ~/Unsuspecting-Repo/basicboost/small.cdc

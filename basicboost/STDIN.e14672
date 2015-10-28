@@ -1,0 +1,25 @@
+==================================================
+BUILD_HOST                          = 
+COMPILER_VERSION                    = icpc-20150815
+GLIBC_VERSION                       = 2.14.1
+BUILD_DATE                          = Oct 28 2015 02:59:17
+HOST                                = compute-102-4-mic0-k1om-Linux-2.6.38.8+mpss3.5.2
+CPU                                 = GenuineIntel 
+LD_PRELOAD                          = (null)
+CPUINFO                             = Family 11 Model 1 Stepping 2
+KMP_AFFINITY                        = (null)
+KMP_BLOCKTIME                       = (null)
+N_INITIAL                           = 1
+SPEED                               = 1.000000e-02
+T                                   = 500
+L                                   = 80
+D                                   = 3.000000e-01
+MU                                  = 1.000000e-01
+FINALNUMBERCELLS                    = 65536
+SPATIALSCALE                        = 5.000000e+00
+SPATIALRANGE                        = 1.240157e-01
+PATHTHRESHOLD                       = 2.000000e+00
+DIVTHRESHOLD                        = 16
+------------------------------------------
+INITIALIZATION_TIME                 = 3.189229e+05 s
+bash: line 1: 186551 Segmentation fault      ~/Unsuspecting-Repo/basicboost/cell_clustering ~/Unsuspecting-Repo/basicboost/small.cdc

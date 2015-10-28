@@ -1,0 +1,431 @@
+Intel(R) Advisor can now assist with vectorization and show optimization
+  report messages with your source code.
+See "https://software.intel.com/en-us/intel-advisor-xe" for details.
+
+
+Begin optimization report for: main(int, char **)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(788,17)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(788,17)
+<Remainder loop for vectorization>
+   remark #15301: REMAINDER LOOP WAS VECTORIZED
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(791,2)
+
+   LOOP BEGIN at cell_clustering.cpp(794,17)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(794,17)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(795,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(795,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(809,4)
+
+   LOOP BEGIN at cell_clustering.cpp(814,24)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(814,24)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(852,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(853,6)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(853,6)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(854,6)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(854,6)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(204,3) inlined into cell_clustering.cpp(848,4)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(205,4) inlined into cell_clustering.cpp(848,4)
+
+      LOOP BEGIN at cell_clustering.cpp(206,23) inlined into cell_clustering.cpp(848,4)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(206,23) inlined into cell_clustering.cpp(848,4)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(207,23) inlined into cell_clustering.cpp(848,4)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(207,23) inlined into cell_clustering.cpp(848,4)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(204,3) inlined into cell_clustering.cpp(898,4)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(205,4) inlined into cell_clustering.cpp(898,4)
+
+      LOOP BEGIN at cell_clustering.cpp(206,23) inlined into cell_clustering.cpp(898,4)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(206,23) inlined into cell_clustering.cpp(898,4)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(207,23) inlined into cell_clustering.cpp(898,4)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(207,23) inlined into cell_clustering.cpp(898,4)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(905,5)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(907,18)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(907,18)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(908,18)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(908,18)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(909,18)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(909,18)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(911,6)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at cell_clustering.cpp(912,7)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(912,7)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(913,7)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(913,7)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: getCriterion(float **, int *, int, float, int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(558,2)
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(574,3)
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(63,13) inlined into cell_clustering.cpp(613,16)
+   remark #15300: LOOP WAS VECTORIZED
+LOOP END
+===========================================================================
+
+Begin optimization report for: getEnergy(float **, int *, int, float, int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(421,2)
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(443,3)
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(463,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(464,4)
+
+      LOOP BEGIN at cell_clustering.cpp(63,13) inlined into cell_clustering.cpp(465,16)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: cellMovementAndDuplication(float **, float *, int *, int *, float, int, int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(227,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(230,9)
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(236,30)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(236,30)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(239,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(239,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(240,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(240,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(242,4)
+
+      LOOP BEGIN at cell_clustering.cpp(63,13) inlined into cell_clustering.cpp(257,27)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: runDiffusionClusterStep(float ****, float **, float **, int *, int, int, float)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(301,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(303,4)
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(321,4)
+      remark #25460: No loop optimizations reported
+
+      LOOP BEGIN at cell_clustering.cpp(322,20)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(322,20)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(347,21)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(347,21)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(348,21)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(348,21)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(350,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(350,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(351,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(351,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(352,16)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(352,16)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: runDiffusionStep(float ****, float ****, int, float)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(150,3)
+   remark #25460: No loop optimizations reported
+
+   LOOP BEGIN at cell_clustering.cpp(151,4)
+
+      LOOP BEGIN at cell_clustering.cpp(152,27)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(152,27)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(153,27)
+         remark #15300: LOOP WAS VECTORIZED
+      LOOP END
+
+      LOOP BEGIN at cell_clustering.cpp(153,27)
+      <Remainder loop for vectorization>
+         remark #15301: REMAINDER LOOP WAS VECTORIZED
+      LOOP END
+   LOOP END
+LOOP END
+
+LOOP BEGIN at cell_clustering.cpp(172,6)
+
+   LOOP BEGIN at cell_clustering.cpp(174,31)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(174,31)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(177,31)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(177,31)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(180,31)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(180,31)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(183,31)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(183,31)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(185,35)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(185,35)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(186,35)
+      remark #15300: LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at cell_clustering.cpp(186,35)
+   <Remainder loop for vectorization>
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+LOOP END
+===========================================================================
+
+Begin optimization report for: produceSubstances(float ****, float **, int *, int, int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at cell_clustering.cpp(117,3)
+LOOP END
+===========================================================================

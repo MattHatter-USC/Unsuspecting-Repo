@@ -239,7 +239,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 			posAll[1][c:e] += 0.1*currentCellMovement[1][c:e] * currentrNorm[c:e];
 			posAll[2][c:e] += 0.1*currentCellMovement[2][c:e] * currentrNorm[c:e];
 			pathTraveled[c:e] += 0.1;
-			for (i = c; i < e; ++i) { //we'll figure this out later
+			for (i = c; i < (e+c); ++i) { //we'll figure this out later
 				// cell duplication if conditions fulfilled
 				if (numberDivisions[i] < divThreshold) {
 					if (pathTraveled[i] > pathThreshold) {
@@ -853,15 +853,15 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "not broken5\n");
 			#pragma omp parallel
 			{
-			#pragma omp for
-			for (c=0; c<n; c++) {
-				// boundary conditions
-				e = min(c+15,(int)n) - c + 1;	
-				for (d=0; d<3; d++) {
-					if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
-					if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
+				#pragma omp for
+				for (c=0; c<n; c++) {
+					// boundary conditions
+					e = min(c+15,(int)n) - c + 1;	
+					for (d=0; d<3; d++) {
+						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
+						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
+					}
 				}
-			}
 			}
 		}
 		phase1_sw.mark();

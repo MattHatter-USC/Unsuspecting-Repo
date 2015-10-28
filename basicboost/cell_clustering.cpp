@@ -38,7 +38,7 @@
 #include "util.hpp"
 //#include <tbb/tbb.h>
 #include <algorithm>
-#include <mkl.h>
+//#include <mkl.h>
 #include <omp.h>
 #include <cmath>
 //used floating point mode relaxed
@@ -841,12 +841,17 @@ int main(int argc, char *argv[]) {
 
 
 		// Phase 1: Cells move randomly and divide until final number of cells is reached
-
+	fprintf(stdout,"not broken");
 		while (n<finalNumberCells) {
+			fprintf(stdout, "not broken1");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
+			fprintf(stdout,"not broken2");
 			runDiffusionStep(Conc,tempConc, L, D); // Simulation of substance diffusion
+			fprintf(stdout, "not broken3");
 			runDecayStep(Conc, L, mu);
+			fprintf(stdout, "not broken4");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
+			fprintf(stdout, "not broken5");
 			//for (c=0; c<n; c++) {
 				// boundary conditions
 				for (d=0; d<3; d++) {
@@ -855,7 +860,6 @@ int main(int argc, char *argv[]) {
 				}
 			//}
 		}
-
 		phase1_sw.mark();
 		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
 

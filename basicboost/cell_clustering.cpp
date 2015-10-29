@@ -838,16 +838,18 @@ int main(int argc, char *argv[]) {
 		tempConc[i1] = new float**[L];
 		#pragma omp parallel default(shared)
 		{
+			int i22;
+			int i33;
 			#pragma omp for
-			for (i2 = 0; i2 < L; i2++) {
-				Conc[i1][i2] = new float*[L];
+			for (i22 = 0; i22 < L; ++i22) {
+				Conc[i1][i22] = new float*[L];
 				tempConc[i1][i2] = new float*[L];
-				for (i3 = 0; i3 < L; i3++) {
-					Conc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
-					tempConc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
+				for (i33 = 0; i33 < L; ++i33) {
+					Conc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
+					tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
 					//for (i4 = 0; i4 < L; i4++) {
 					//tempConc[i1][i2][i3][0:L] = zeroFloat;
-					Conc[i1][i2][i3][0:L] = zeroFloat;
+					Conc[i1][i22][i33][0:L] = zeroFloat;
 					//}
 				}
 			}

@@ -115,25 +115,21 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 		int c,c2,e, i1, i2, i3;
 		#pragma omp for
 		for (c = 0; c < n; ++c) {
-			//e = min(c + 15, (int)n) - c + 1; //size of stream
-			//for (c2 = c; c2 < (c + e); ++c2) {
-				i1 = std::min((int)(posAll[0][c] * rsideLength), (L - 1));
-				i2 = std::min((int)(posAll[1][c] * rsideLength), (L - 1));
-				i3 = std::min((int)(posAll[2][c] * rsideLength), (L - 1));
-fprintf(stderr,"%d, %d, %d",i1,i2,i3);
-				if (typesAll[c] == 1) {
-					Conc[0][i1][i2][i3] += 0.1;
-					if (Conc[0][i1][i2][i3] > 1) {
-						Conc[0][i1][i2][i3] = 1;
-					}
+			i1 = std::min((int)(posAll[0][c] * rsideLength), (L - 1));
+			i2 = std::min((int)(posAll[1][c] * rsideLength), (L - 1));
+			i3 = std::min((int)(posAll[2][c] * rsideLength), (L - 1));
+			if (typesAll[c] == 1) {
+				Conc[0][i1][i2][i3] += 0.1;
+				if (Conc[0][i1][i2][i3] > 1) {
+					Conc[0][i1][i2][i3] = 1;
 				}
-				else {
-					Conc[1][i1][i2][i3] += 0.1;
-					if (Conc[1][i1][i2][i3] > 1) {
-						Conc[1][i1][i2][i3] = 1;
-					}
+			}
+			else {
+				Conc[1][i1][i2][i3] += 0.1;
+				if (Conc[1][i1][i2][i3] > 1) {
+					Conc[1][i1][i2][i3] = 1;
 				}
-fprintf(stderr,"if you dont mind");			//}
+			}
 		}
 	}
     produceSubstances_sw.mark();
@@ -845,15 +841,15 @@ int main(int argc, char *argv[]) {
 	// Phase 1: Cells move randomly and divide until final number of cells is reached
 	fprintf(stderr,"not broken");
 		while (n<finalNumberCells) {
-			fprintf(stderr, "not broken1\n");
+			//fprintf(stderr, "not broken1\n");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
-			fprintf(stderr,"not broken2\n");
+			//fprintf(stderr,"not broken2\n");
 			runDiffusionStep(Conc,tempConc, L, D); // Simulation of substance diffusion
-			fprintf(stderr, "not broken3\n");
+			//fprintf(stderr, "not broken3\n");
 			runDecayStep(Conc, L, mu);
-			fprintf(stderr, "not broken4\n");
+			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
-			fprintf(stderr, "not broken5\n");
+			//fprintf(stderr, "not broken5\n");
 			#pragma omp parallel
 			{
 				#pragma omp for

@@ -927,7 +927,18 @@ int main(int argc, char *argv[]) {
 		phase1_sw.mark();
 		phase2_sw.reset();
 		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "produceSubstances_TIME", produceSubstances_sw.elapsed, produceSubstances_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDiffusionStep_TIME", runDiffusionStep_sw.elapsed, runDiffusionStep_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDecayStep_TIME", runDecayStep_sw.elapsed, runDecayStep_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "cellMovementAndDuplication_TIME", cellMovementAndDuplication_sw.elapsed, cellMovementAndDuplication_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDiffusionClusterStep_TIME", runDiffusionClusterStep_sw.elapsed, runDiffusionClusterStep_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "getEnergy_TIME", getEnergy_sw.elapsed, getEnergy_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "getCriterion_TIME", getCriterion_sw.elapsed, getCriterion_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "TOTAL_COMPUTE_TIME", compute_sw.elapsed, compute_sw.elapsed*100.0f / compute_sw.elapsed);
 
+		fprintf(stderr, "==================================================\n");
+
+		return 0;
 		// Phase 2: Cells move along the substance gradients and cluster
 
 		for (i = 0; i < T; i++) {

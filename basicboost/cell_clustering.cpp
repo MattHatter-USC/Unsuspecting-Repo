@@ -860,7 +860,7 @@ int main(int argc, char *argv[]) {
 	// Phase 1: Cells move randomly and divide until final number of cells is reached
 	fprintf(stderr,"not broken");
 		while (n<finalNumberCells) {
-			fprintf(stderr, n + "\n");
+			fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");

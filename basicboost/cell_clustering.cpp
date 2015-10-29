@@ -91,6 +91,11 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
     return l2Norm;
 }
 
+__attribute__((vector)) inline float getL2DistanceSq(float dx,float dy,float dz) {
+	// returns distance (L2 norm) between two positions in 3D
+	return dx*dx+dy*dy+dz*dz;
+}
+
 static stopwatch produceSubstances_sw;
 static stopwatch runDiffusionStep_sw;
 static stopwatch runDecayStep_sw;
@@ -221,7 +226,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 		float duplicatedCellOffset[3];
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
-			e = min(16, (int)n - c + 1);	 //size of stream
+			e = min(16, (int)n - c);	 //size of stream
 			// random cell movement
 			for (i = 0; i < e; ++i) {
 				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
@@ -229,7 +234,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 				currentCellMovement[2][i] = RandomFloatPos() - 0.5;
 			}
 			//currentNorm = getNorm(currentCellMovement);
-			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][c:e]* currentCellMovement[0][c:e] + currentCellMovement[1][c:e]*currentCellMovement[1][c:e] + currentCellMovement[2][c:e]*currentCellMovement[2][c:e]);
+			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][0:e]* currentCellMovement[0][0:e] + currentCellMovement[1][0:e]*currentCellMovement[1][0:e] + currentCellMovement[2][0:e]*currentCellMovement[2][0:e]);
 
 			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
 			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];
@@ -241,19 +246,19 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 					if (pathTraveled[i] > pathThreshold) {
 						pathTraveled[i] -= pathThreshold;
 						numberDivisions[i] += 1;  // update number of divisions this cell has undergone
-						//#pragma omp critical
-						//{
+						#pragma omp critical
+						{
 							newcellnum = currentNumberCells++;   // update number of cells in the simulation (all in one steppp)
-						//}
-						numberDivisions[newcellnum] = numberDivisions[c];   // update number of divisions the duplicated cell has undergone
-						typesAll[newcellnum] = -typesAll[c]; // assign type of duplicated cell (opposite to current cell)
+						}
+						numberDivisions[newcellnum] = numberDivisions[i];   // update number of divisions the duplicated cell has undergone
+						typesAll[newcellnum] = -typesAll[i]; // assign type of duplicated cell (opposite to current cell)
 
 						// assign location of duplicated cell
 						duplicatedCellOffset[0] = RandomFloatPos() - 0.5;
 						duplicatedCellOffset[1] = RandomFloatPos() - 0.5;
 						duplicatedCellOffset[2] = RandomFloatPos() - 0.5;
 						//currentNorm = getNorm(duplicatedCellOffset);
-						currentrNorm2 = 1 / getNorm(duplicatedCellOffset);
+						currentrNorm2 = 1.0 / getNorm(duplicatedCellOffset);
 						posAll[0][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[0] * currentrNorm2;
 						posAll[1][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[1] * currentrNorm2;
 						posAll[2][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[2] * currentrNorm2;
@@ -298,7 +303,7 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int i1, i2, i3,it;
 		int cit;
 		for (c = 0; c < n; c += 16) {
-			e = min(16, (int)n - c + 1);
+			e = min(16, (int)n - c);
 			for (it = 0; it < e; ++it) {
 				cit = c + it;
 				i[0] = std::min((int)(posAll[0][cit] * rsidelength), (L - 1));
@@ -453,6 +458,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 		}
 	}
 	float nrSmallDist = 0.0;
+	float spatialRangeSq = spatialRange*spatialRange;
 	#pragma omp parallel default(shared)
 	{
 	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) {
@@ -461,8 +467,8 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
-				currDist = getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
-				if (currDist < spatialRange) {
+				currDist = getL2Distance(posSubvol[0][i1]-posSubvol[0][i2], posSubvol[1][i1]-posSubvol[1][i2], posSubvol[2][i1]-posSubvol[2][i2]);
+				if (currDist < spatialRangeSq) {
 					++nrSmallDist;//currDist/spatialRange;
 					if (typesSubvol[i1] * typesSubvol[i2] > 0) {
 						intraClusterEnergy = intraClusterEnergy + fmin(100.0, spatialRange / currDist);
@@ -602,23 +608,35 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
     }
 	//could combine these but how many ops would it really save? not many..
 	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) { 
+	float spatialRangeSq = spatialRange * spatialRange;
+
 	#pragma omp parallel default(shared)
 	{
-		float currDist;
-		int i1, i2;
+
+		__declspec(align(64)) float currDist[16];
+		__declspec(align(64)) float expanded[3][16];
+		int i1,it, i2, e,ipe;
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
-			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
-				currDist = getL2Distance(posSubvol[i1][0], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
-				if (currDist < spatialRange) {
-					#pragma omp critical
-					{
-						nrClose++;
-						if (typesSubvol[i1] * typesSubvol[i2] < 0) {
-							diffTypeClose++;
-						}
-						else {
-							sameTypeClose++;
+			for (it = 0; it < 3; ++it) { //save a few operations
+				expanded[it][0:16] = posSubvol[it][i1];
+			}
+			for (i2 = i1 + 1; i2 < nrCellsSubVol; i2+=16) {
+				e = min(16,nrCellsSubVol-i2);
+				//ipe = i2 + e; 
+				currDist[0:e] = getL2DistanceSq(expanded[0][0:e] - posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e]);
+				//getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
+				for (it = 0; it < e; ++it) {
+					if (currDist[it] < spatialRangeSq) {
+						#pragma omp critical
+						{
+							nrClose++;
+							if (typesSubvol[i1] * typesSubvol[i2+it] < 0) {
+								diffTypeClose++;
+							}
+							else {
+								sameTypeClose++;
+							}
 						}
 					}
 				}
@@ -802,6 +820,7 @@ int main(int argc, char *argv[]) {
 	for (i1 = 0; i1 < 2; i1++) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
+		#pragma omd parallel for
 		for (i2 = 0; i2 < L; i2++) {
 			Conc[i1][i2] = new float*[L];
 			tempConc[i1][i2] = new float*[L];
@@ -856,7 +875,7 @@ int main(int argc, char *argv[]) {
 				#pragma omp for
 				for (c=0; c<n; c++) {
 					// boundary conditions
-					e = min(16,(int)n-c+1);	
+					e = min(16,(int)n-c);	
 					for (d=0; d<3; d++) {
 						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
 						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
@@ -911,7 +930,7 @@ int main(int argc, char *argv[]) {
 				int e;
 				#pragma omp for
 				for (c = 0; c < n; c += 16) {
-					e = min(16, (int)n - c + 1);
+					e = min(16, (int)n - c);
 					posAll[0][c:e] = posAll[0][c:e] + currMov[0][c:e];
 					posAll[1][c:e] = posAll[1][c:e] + currMov[1][c:e];
 					posAll[2][c:e] = posAll[2][c:e] + currMov[2][c:e];

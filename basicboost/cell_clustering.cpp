@@ -225,7 +225,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 		float duplicatedCellOffset[3];
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
-			e = min(c + 15, (int)n) - c + 1; //size of stream
+			e = min(16, (int)n - c + 1);	 //size of stream
 			// random cell movement
 			for (i = 0; i < 16; ++i) {
 				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
@@ -245,7 +245,10 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 					if (pathTraveled[i] > pathThreshold) {
 						pathTraveled[i] -= pathThreshold;
 						numberDivisions[i] += 1;  // update number of divisions this cell has undergone
-						newcellnum = currentNumberCells++;   // update number of cells in the simulation (all in one steppp)
+						#pragma omp critical
+						{
+							newcellnum = currentNumberCells++;   // update number of cells in the simulation (all in one steppp)
+						}
 						numberDivisions[newcellnum] = numberDivisions[c];   // update number of divisions the duplicated cell has undergone
 						typesAll[newcellnum] = -typesAll[c]; // assign type of duplicated cell (opposite to current cell)
 
@@ -299,7 +302,7 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int i1, i2, i3,it;
 		int cit;
 		for (c = 0; c < n; c += 16) {
-			e = min(c + 15, (int)n) - c + 1; 
+			e = min(16, (int)n - c + 1);
 			for (it = 0; it < e; ++it) {
 				cit = c + it;
 				i[0] = std::min((int)(posAll[0][cit] * rsidelength), (L - 1));
@@ -856,7 +859,7 @@ int main(int argc, char *argv[]) {
 				#pragma omp for
 				for (c=0; c<n; c++) {
 					// boundary conditions
-					e = min(c+15,(int)n) - c + 1;	
+					e = min(16,(int)n-c+1);	
 					for (d=0; d<3; d++) {
 						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
 						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
@@ -911,7 +914,7 @@ int main(int argc, char *argv[]) {
 				int e;
 				#pragma omp for
 				for (c = 0; c < n; c += 16) {
-					e = min(c + 15, (int)n) - c + 1; //size of stream
+					e = min(16, (int)n - c + 1);
 					posAll[0][c:e] = posAll[0][c:e] + currMov[0][c:e];
 					posAll[1][c:e] = posAll[1][c:e] + currMov[1][c:e];
 					posAll[2][c:e] = posAll[2][c:e] + currMov[2][c:e];

@@ -118,25 +118,34 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 	int div = min(n / 20, 500); //figure this out later
 	#pragma omp parallel default(shared)
 	{
-		int c,c2,e, i1, i2, i3;
+		int c, c2, e; //i1, i2, i3;
+		e = 16;
+		int i1[16];
+		int i2[16];
+		int i3[16];
+
 		#pragma omp for
-		for (c = 0; c < n; ++c) {
-			i1 = std::min((int)(posAll[0][c] * rsideLength), (L - 1));
-			i2 = std::min((int)(posAll[1][c] * rsideLength), (L - 1));
-			i3 = std::min((int)(posAll[2][c] * rsideLength), (L - 1));
-			if (typesAll[c] == 1) {
-				Conc[0][i1][i2][i3] += 0.1;
-				if (Conc[0][i1][i2][i3] > 1) {
-					Conc[0][i1][i2][i3] = 1;
+		for (c = 0; c < n; c+=16) {
+			if (n - c < 16) {
+				e = n - c;
+			}
+		//for (c = 0; c < n; ++c) {
+			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
+			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
+			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
+			if (typesAll[c:e] == 1) {
+				Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] += 0.1;
+				if (Conc[0][i1[0:e]][i2[0:e]][i3[0:e]]> 1) {
+					Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] = 1;
 				}
 			}
 			else {
-				Conc[1][i1][i2][i3] += 0.1;
-				if (Conc[1][i1][i2][i3] > 1) {
-					Conc[1][i1][i2][i3] = 1;
+				Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] += 0.1;
+				if (Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] > 1) {
+					Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] = 1;
 				}
 			}
-		}
+		//}
 	}
     produceSubstances_sw.mark();
 }

@@ -125,11 +125,11 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 		int i3[16];
 
 		#pragma omp for
-		for (c = 0; c < n; c+=16) {
+		for (c = 0; c < n; c += 16) {
 			if (n - c < 16) {
 				e = n - c;
 			}
-		//for (c = 0; c < n; ++c) {
+			//for (c = 0; c < n; ++c) {
 			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
 			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
 			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
@@ -145,7 +145,7 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 					Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] = 1;
 				}
 			}
-		//}
+		}
 	}
     produceSubstances_sw.mark();
 }

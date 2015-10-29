@@ -879,9 +879,9 @@ int main(int argc, char *argv[]) {
 
 
 	// Phase 1: Cells move randomly and divide until final number of cells is reached
-	fprintf(stderr,"not broken");
+	//fprintf(stderr,"not broken");
 		while (n<finalNumberCells) {
-			fprintf(stderr,"%d\n", (int)n);
+			//fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");
@@ -891,18 +891,18 @@ int main(int argc, char *argv[]) {
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
-			#pragma omp parallel
-			{
-				#pragma omp for
-				for (c=0; c<n; c+=16) {
+			//#pragma omp parallel
+			//{
+				//#pragma omp for
+				//for (c=0; c<n; c+=16) {
 					// boundary conditions
-					e = min(16,(int)n-c);	
+					//e = min(16,(int)n-c);	
 					for (d=0; d<3; d++) {
-						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
-						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
+						if (posAll[d][c:n]<0) { posAll[d][c:n] = 0; }
+						if (posAll[d][c:n]>1) { posAll[d][c:n] = 1; }
 					}
-				}
-			}
+				//}
+			//}
 		}
 		phase1_sw.mark();
 		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);

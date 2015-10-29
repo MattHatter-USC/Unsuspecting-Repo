@@ -719,7 +719,7 @@ static void help(const char *name)
 }
 
 int main(int argc, char *argv[]) {
-
+	init_sw.reset();
     const option opts[] =
     {
         {"help",            no_argument,       0, 'h'},
@@ -905,6 +905,7 @@ int main(int argc, char *argv[]) {
 			//}
 		}
 		phase1_sw.mark();
+		phase2_sw.reset();
 		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
 
 		// Phase 2: Cells move along the substance gradients and cluster

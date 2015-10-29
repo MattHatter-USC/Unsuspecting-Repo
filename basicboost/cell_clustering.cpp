@@ -634,7 +634,6 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
 	#pragma omp parallel default(shared) if (parallels)
 	{
-
 		__declspec(align(64)) float currDist[16];
 		__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
@@ -864,10 +863,9 @@ int main(int argc, char *argv[]) {
 					//for (i4 = 0; i4 < L; i4++) {
 					//tempConc[i1][i2][i3][0:L] = zeroFloat;
 					Conc[i1][i22][i33][0:L] = zeroFloat;
-					//}
 				}
 			}
-		//}
+		}
 	}
 
 	int halfsies = (int)(0.5*(float)L);
@@ -905,19 +903,26 @@ int main(int argc, char *argv[]) {
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
+			#if parallels
 			int e = 16;
 			#pragma omp parallel if (parallels)
 			{
 				#pragma omp for
-				for (c=0; c<n; c+=16) 
+				for (c=0; c<n; c+=16) {
 					if (n - c < 16) { e = (int)n - c; }
 					// boundary conditions
 					for (d=0; d<3; d++) {
-						if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
-						if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
+						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
+						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
 					}
-				//}
-			//}
+				}
+			}
+			#else
+			for (d = 0; d<3; d++) {
+				if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
+				if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
+			}
+			#endif
 		}
 		phase1_sw.mark();
 		phase2_sw.reset();

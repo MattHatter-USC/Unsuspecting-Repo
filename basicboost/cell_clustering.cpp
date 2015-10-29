@@ -227,17 +227,17 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c + 1);	 //size of stream
 			// random cell movement
-			for (i = 0; i < 16; ++i) {
+			for (i = 0; i < e; ++i) {
 				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
 				currentCellMovement[1][i] = RandomFloatPos() - 0.5;
 				currentCellMovement[2][i] = RandomFloatPos() - 0.5;
 			}
 			//currentNorm = getNorm(currentCellMovement);
-			currentrNorm[c:e] = 1.0 / sqrtf(currentCellMovement[0][c:e]* currentCellMovement[0][c:e] + currentCellMovement[1][c:e]*currentCellMovement[1][c:e] + currentCellMovement[2][c:e]*currentCellMovement[2][c:e]);
+			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][c:e]* currentCellMovement[0][c:e] + currentCellMovement[1][c:e]*currentCellMovement[1][c:e] + currentCellMovement[2][c:e]*currentCellMovement[2][c:e]);
 
-			posAll[0][c:e] += 0.1*currentCellMovement[0][c:e] * currentrNorm[c:e];
-			posAll[1][c:e] += 0.1*currentCellMovement[1][c:e] * currentrNorm[c:e];
-			posAll[2][c:e] += 0.1*currentCellMovement[2][c:e] * currentrNorm[c:e];
+			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
+			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];
+			posAll[2][c:e] += 0.1*currentCellMovement[2][0:e] * currentrNorm[0:e];
 			pathTraveled[c:e] += 0.1;
 			for (i = c; i < (e+c); ++i) { //we'll figure this out later
 				// cell duplication if conditions fulfilled
@@ -245,10 +245,10 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 					if (pathTraveled[i] > pathThreshold) {
 						pathTraveled[i] -= pathThreshold;
 						numberDivisions[i] += 1;  // update number of divisions this cell has undergone
-						#pragma omp critical
-						{
+						//#pragma omp critical
+						//{
 							newcellnum = currentNumberCells++;   // update number of cells in the simulation (all in one steppp)
-						}
+						//}
 						numberDivisions[newcellnum] = numberDivisions[c];   // update number of divisions the duplicated cell has undergone
 						typesAll[newcellnum] = -typesAll[c]; // assign type of duplicated cell (opposite to current cell)
 
@@ -322,8 +322,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 				gradsub1[2][cit] = Conc[1][i[0]][i[1]][up[2][it]] - Conc[1][i[0]][i[1]][down[2][it]];
 			}
 			for (it = 0; it < 3; ++it) {
-				gradsub1[it][c:e] /= (sideLength*(up[it][c:e] - down[it][c:e]));
-				gradsub2[it][c:e] /= (sideLength*(up[it][c:e] - down[it][c:e]));
+				gradsub1[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
+				gradsub2[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
 			}
 			//i1 = std::min((int)floor(posAll[c][0] * rsidelength), (L - 1));
 			//i2 = std::min((int)floor(posAll[c][1] * rsidelength), (L - 1));
@@ -350,9 +350,9 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
 			normGrad2[c:e] = sqrt(gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e]);
 
-			movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][c:e] / normGrad1[c:e] - gradsub2[0][c:e] / normGrad2[c:e])*speed*(normGrad1[c:e] > 0)* (normGrad2[c:e] > 0);
-			movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][c:e] / normGrad1[c:e] - gradsub2[1][c:e] / normGrad2[c:e])*speed*(normGrad1[c:e] > 0)* (normGrad2[c:e] > 0);
-			movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][c:e] / normGrad1[c:e] - gradsub2[2][c:e] / normGrad2[c:e])*speed*(normGrad1[c:e] > 0)* (normGrad2[c:e] > 0);
+			movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
+			movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
+			movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
 		}
 	}
 	runDiffusionClusterStep_sw.mark();

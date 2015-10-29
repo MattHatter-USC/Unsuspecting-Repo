@@ -898,8 +898,8 @@ int main(int argc, char *argv[]) {
 					// boundary conditions
 					//e = min(16,(int)n-c);	
 					for (d=0; d<3; d++) {
-						if (posAll[d][c:n]<0) { posAll[d][c:n] = 0; }
-						if (posAll[d][c:n]>1) { posAll[d][c:n] = 1; }
+						if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
+						if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
 					}
 				//}
 			//}

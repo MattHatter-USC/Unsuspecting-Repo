@@ -473,7 +473,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
 				e = min(16, (int)nrCellsSubVol);
-				currDist[0:e] = sqrtf(getL2Distance(expanded[0][0:e]-posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				currDist[0:e] = sqrtf(getL2DistanceSq(expanded[0][0:e]-posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				for (it = 0; it < i2 + e; ++it) { //could maybe vectorize this
 					if (currDist[it] < spatialRangeSq) {
 						++nrSmallDist;//currDist/spatialRange;

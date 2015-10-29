@@ -1,4 +1,5 @@
 /*
+
   Copyright (c) 2015, Newcastle University (United Kingdom)
   All rights reserved.
 
@@ -809,6 +810,14 @@ int main(int argc, char *argv[]) {
     typesAll[0]=1;  // the first cell is of type 1
 
     bool currCriterion;
+	//#pragma omp parallel //let's try this and compare it with the other one
+	//{
+		//#pragma omp for
+		//for (i1 = 0; i1 < finalNumberCells; i1+=16) {
+			//e = min(16, (int)finalNumberCells - i1);
+			//pathTraveled[0:e] = zeroFloat;
+		//}
+	//}
 	pathTraveled[0:finalNumberCells] = zeroFloat;
 
     // Initialization of the various arrays
@@ -827,17 +836,20 @@ int main(int argc, char *argv[]) {
 	for (i1 = 0; i1 < 2; i1++) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
-		#pragma omp parallel for
-		for (i2 = 0; i2 < L; i2++) {
-			Conc[i1][i2] = new float*[L];
-			tempConc[i1][i2] = new float*[L];
-			for (i3 = 0; i3 < L; i3++) {
-				Conc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
-				tempConc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
-				//for (i4 = 0; i4 < L; i4++) {
-				//tempConc[i1][i2][i3][0:L] = zeroFloat;
-				Conc[i1][i2][i3][0:L] = zeroFloat;
-				//}
+		#pragma omp parallel default(shared)
+		{
+			#pragma omp for
+			for (i2 = 0; i2 < L; i2++) {
+				Conc[i1][i2] = new float*[L];
+				tempConc[i1][i2] = new float*[L];
+				for (i3 = 0; i3 < L; i3++) {
+					Conc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
+					tempConc[i1][i2][i3] = (float*)_mm_malloc(sizeof(float)*L, 64);
+					//for (i4 = 0; i4 < L; i4++) {
+					//tempConc[i1][i2][i3][0:L] = zeroFloat;
+					Conc[i1][i2][i3][0:L] = zeroFloat;
+					//}
+				}
 			}
 		}
 	}

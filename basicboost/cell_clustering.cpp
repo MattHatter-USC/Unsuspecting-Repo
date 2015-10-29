@@ -442,7 +442,6 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	{
 		int currsubvol;
 		int i1, i2;
-		float currDist;
 		#pragma omp for
 		for (i1 = 0; i1 < n; ++i1) {
 			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
@@ -462,19 +461,27 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	#pragma omp parallel default(shared)
 	{
 	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) {
-		float currDist;
-		int i1, i2;
+		//float currDist;
+		int i1, i2, it, e;
+		float currDist[16];
+		float expanded[3][16];
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
+			for (it = 0; it < 3; ++it) { //save a few operations
+				expanded[it][0:16] = posSubvol[it][i1];
+			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
-				currDist = getL2Distance(posSubvol[0][i1]-posSubvol[0][i2], posSubvol[1][i1]-posSubvol[1][i2], posSubvol[2][i1]-posSubvol[2][i2]);
-				if (currDist < spatialRangeSq) {
-					++nrSmallDist;//currDist/spatialRange;
-					if (typesSubvol[i1] * typesSubvol[i2] > 0) {
-						intraClusterEnergy = intraClusterEnergy + fmin(100.0, spatialRange / currDist);
-					}
-					else {
-						extraClusterEnergy = extraClusterEnergy + fmin(100.0, spatialRange / currDist);
+				e = min(16, (int)nrCellsSubVol);
+				currDist[0:e] = sqrtf(getL2Distance(expanded[0][0:e]-posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				for (it = 0; it < i2 + e; ++it) { //could maybe vectorize this
+					if (currDist[it] < spatialRangeSq) {
+						++nrSmallDist;//currDist/spatialRange;
+						if (typesSubvol[i1] * typesSubvol[i2] > 0) {
+							intraClusterEnergy = intraClusterEnergy + fmin(100.0, spatialRange / currDist[it]); //only perform costly sqrt when necessary
+						}
+						else {
+							extraClusterEnergy = extraClusterEnergy + fmin(100.0, spatialRange / currDist[it]); //''
+						}
 					}
 				}
 			}
@@ -820,7 +827,7 @@ int main(int argc, char *argv[]) {
 	for (i1 = 0; i1 < 2; i1++) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
-		#pragma omd parallel for
+		#pragma omp parallel for
 		for (i2 = 0; i2 < L; i2++) {
 			Conc[i1][i2] = new float*[L];
 			tempConc[i1][i2] = new float*[L];

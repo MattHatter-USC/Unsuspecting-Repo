@@ -833,17 +833,17 @@ int main(int argc, char *argv[]) {
 	float**** tempConc;
     Conc = new float***[2]; //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
 	tempConc = new float***[2];
-	for (i1 = 0; i1 < 2; i1++) {
+	for (i1 = 0; i1 < 2; ++i1) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
-		#pragma omp parallel default(shared)
-		{
+		//#pragma omp parallel default(shared)
+		//{
 			int i22;
 			int i33;
-			#pragma omp for
+			//#pragma omp for
 			for (i22 = 0; i22 < L; ++i22) {
 				Conc[i1][i22] = new float*[L];
-				tempConc[i1][i2] = new float*[L];
+				tempConc[i1][i22] = new float*[L];
 				for (i33 = 0; i33 < L; ++i33) {
 					Conc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
 					tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
@@ -853,7 +853,7 @@ int main(int argc, char *argv[]) {
 					//}
 				}
 			}
-		}
+		//}
 	}
 
 	int halfsies = (int)(0.5*(float)L);
@@ -894,7 +894,7 @@ int main(int argc, char *argv[]) {
 			#pragma omp parallel
 			{
 				#pragma omp for
-				for (c=0; c<n; c++) {
+				for (c=0; c<n; c+=16) {
 					// boundary conditions
 					e = min(16,(int)n-c);	
 					for (d=0; d<3; d++) {

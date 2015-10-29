@@ -833,13 +833,13 @@ int main(int argc, char *argv[]) {
 	float**** tempConc;
     Conc = new float***[2]; //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
 	tempConc = new float***[2];
+	int i22, i33;
 	for (i1 = 0; i1 < 2; ++i1) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
 		//#pragma omp parallel default(shared)
 		//{
-			int i22;
-			int i33;
+		//int i22, i33;
 			//#pragma omp for
 			for (i22 = 0; i22 < L; ++i22) {
 				Conc[i1][i22] = new float*[L];

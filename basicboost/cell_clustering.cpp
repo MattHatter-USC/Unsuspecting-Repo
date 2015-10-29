@@ -30,6 +30,9 @@
 
 //typedef float* __restrict__  __attribute__((align_value(64))) fptr;
 
+#define parallels false
+
+
 #include <cilk/cilk.h>
 #include <cstring>
 #include <cstdlib>
@@ -116,7 +119,7 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 	//float sideLength = 1 / (float)L; // length of a side of a diffusion voxel
 	float rsideLength = (float)L;
 	int div = min(n / 20, 500); //figure this out later
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if(parallels)
 	{
 		int c, c2, e; //i1, i2, i3;
 		e = 16;
@@ -124,25 +127,25 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 		int i2[16];
 		int i3[16];
 
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (c = 0; c < n; c += 16) {
-			if (n - c < 16) {
-				e = n - c;
-			}
+			if (n - c < 16) { e = (int)n - c; }
 			//for (c = 0; c < n; ++c) {
 			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
 			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
 			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
-			if (typesAll[c:e] == 1) {
-				Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] += 0.1;
-				if (Conc[0][i1[0:e]][i2[0:e]][i3[0:e]]> 1) {
-					Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] = 1;
+			for (c2 = 0; c2 < e; ++c2) {
+				if (typesAll[c+c2] == 1) {
+					Conc[0][i1[c2]][i2[c2]][i3[c2]] += 0.1;
+					if (Conc[0][i1[c2]][i2[c2]][i3[c2]]> 1) {
+						Conc[0][i1[c2]][i2[c2]][i3[c2]] = 1;
+					}
 				}
-			}
-			else {
-				Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] += 0.1;
-				if (Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] > 1) {
-					Conc[0][i1[0:e]][i2[0:e]][i3[0:e]] = 1;
+				else {
+					Conc[1][i1[c2]][i2[c2]][i3[c2]] += 0.1;
+					if (Conc[1][i1[c2]][i2[c2]][i3[c2]]> 1) {
+						Conc[1][i1[c2]][i2[c2]][i3[c2]] = 1;
+					}
 				}
 			}
 		}
@@ -154,10 +157,10 @@ static void runDiffusionStep(float **** Conc, float **** tempConc, int L, float 
     runDiffusionStep_sw.reset();
     // computes the changes in substance concentrations due to diffusion
     //float tempConc[2][L][L][L]; //holy jesus pls no
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i1, i2, i3, subInd, e;
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (int i1 = 0; i1 < L; ++i1) {
 			for (int i2 = 0; i2 < L; ++i2) {
 				tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
@@ -168,7 +171,7 @@ static void runDiffusionStep(float **** Conc, float **** tempConc, int L, float 
 		int up[3][16];
 		int down[3][16];
 		
-		#pragma omp for      //                  TRY TO PUT PARALLEL FOR ON MIDDLE "FOR" LOOP SO WE CAN  USE MORE THREADING AT ONCE!!!
+		#pragma omp for if(parallels)     //                  TRY TO PUT PARALLEL FOR ON MIDDLE "FOR" LOOP SO WE CAN  USE MORE THREADING AT ONCE!!!
 		for (i1 =0; i1 < L; ++i1) {
 			//e = min(i1 + 15, (int)n) - i1 + 1; //size of 
 			for (i2 = 0; i2 < L; ++i2) {
@@ -208,10 +211,10 @@ static void runDecayStep(float**** Conc, int L, float mu) {
     runDecayStep_sw.reset();
     // computes the changes in substance concentrations due to decay
 	float val = (1 - mu);
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i1, i2;
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (i1 = 0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; i2++) {
 				Conc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L] * val;
@@ -226,7 +229,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
     cellMovementAndDuplication_sw.reset();
 	int div = min(n / 20, 500); //figure this out later
 	int currentNumberCells = n;
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		int c, i, e;
 		int newcellnum;
@@ -234,7 +237,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 		float currentrNorm2;
 		float currentCellMovement[3][16];
 		float duplicatedCellOffset[3];
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
 			// random cell movement
@@ -256,7 +259,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 					if (pathTraveled[i] > pathThreshold) {
 						pathTraveled[i] -= pathThreshold;
 						numberDivisions[i] += 1;  // update number of divisions this cell has undergone
-						#pragma omp critical
+						#pragma omp critical if (parallels)
 						{
 							newcellnum = currentNumberCells++;   // update number of cells in the simulation (all in one steppp)
 						}
@@ -298,7 +301,7 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 
 	//(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
 
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		//int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
 		//int[][] i[3][16];
@@ -312,6 +315,7 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int e,c;
 		int i1, i2, i3,it;
 		int cit;
+		#pragma omp for if (parallels)
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);
 			for (it = 0; it < e; ++it) {
@@ -448,14 +452,14 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
     float intraClusterEnergy = 0.0;
     float extraClusterEnergy = 0.0;
 	//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		int currsubvol;
 		int i1, i2;
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (i1 = 0; i1 < n; ++i1) {
 			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
-				#pragma omp critical //yay
+				#pragma omp critical if (parallels) //yay
 				{
 					currsubvol = nrCellsSubVol++; //iterate after
 				}
@@ -468,14 +472,14 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	}
 	float nrSmallDist = 0.0;
 	float spatialRangeSq = spatialRange*spatialRange;
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) {
 		//float currDist;
 		int i1, i2, it, e;
 		float currDist[16];
 		float expanded[3][16];
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
 			for (it = 0; it < 3; ++it) { //save a few operations
 				expanded[it][0:16] = posSubvol[it][i1];
@@ -588,11 +592,12 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
     // the locations of all cells within the subvolume are copied to array posSubvol
 	//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-	#pragma omp parallel default(shared)
+	#if !noparallel	
+	#pragma omp parallel default(shared) if (parallels)
 	{
 		int subvolnum;
 		int i1, i2;
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (i1 = 0; i1 < n; ++i1) {
 			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
 				subvolnum = nrCellsSubVol++;
@@ -627,13 +632,13 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) { 
 	float spatialRangeSq = spatialRange * spatialRange;
 
-	#pragma omp parallel default(shared)
+	#pragma omp parallel default(shared) if (parallels)
 	{
 
 		__declspec(align(64)) float currDist[16];
 		__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
-		#pragma omp for
+		#pragma omp for if (parallels)
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
 			for (it = 0; it < 3; ++it) { //save a few operations
 				expanded[it][0:16] = posSubvol[it][i1];
@@ -645,7 +650,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 				//getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
 				for (it = 0; it < e; ++it) {
 					if (currDist[it] < spatialRangeSq) {
-						#pragma omp critical
+						#pragma omp critical if (parallels)
 						{
 							nrClose++;
 							if (typesSubvol[i1] * typesSubvol[i2+it] < 0) {
@@ -842,14 +847,14 @@ int main(int argc, char *argv[]) {
 	float**** tempConc;
     Conc = new float***[2]; //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
 	tempConc = new float***[2];
-	int i22, i33;
+	//int i22, i33;
 	for (i1 = 0; i1 < 2; ++i1) {
 		Conc[i1] = new float**[L];
 		tempConc[i1] = new float**[L];
-		//#pragma omp parallel default(shared)
-		//{
-		//int i22, i33;
-			//#pragma omp for
+		#pragma omp parallel default(shared) if (parallels)
+		{
+		int i22, i33;
+			#pragma omp for if (parallels)
 			for (i22 = 0; i22 < L; ++i22) {
 				Conc[i1][i22] = new float*[L];
 				tempConc[i1][i22] = new float*[L];
@@ -900,12 +905,13 @@ int main(int argc, char *argv[]) {
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
-			//#pragma omp parallel
-			//{
-				//#pragma omp for
-				//for (c=0; c<n; c+=16) {
+			int e = 16;
+			#pragma omp parallel if (parallels)
+			{
+				#pragma omp for if (parallels)
+				for (c=0; c<n; c+=16) 
+					if (n - c < 16) { e = (int)n - c; }
 					// boundary conditions
-					//e = min(16,(int)n-c);	
 					for (d=0; d<3; d++) {
 						if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
 						if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
@@ -956,12 +962,12 @@ int main(int argc, char *argv[]) {
 			runDecayStep(Conc, L, mu);
 			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-			#pragma omp parallel default(shared)
+			#pragma omp parallel default(shared) if (parallels)
 			{
 				int e;
-				#pragma omp for
+				#pragma omp for if (parallels)
 				for (c = 0; c < n; c += 16) {
-					e = min(16, (int)n - c);
+					e = min(16, (int)n - c); 
 					posAll[0][c:e] = posAll[0][c:e] + currMov[0][c:e];
 					posAll[1][c:e] = posAll[1][c:e] + currMov[1][c:e];
 					posAll[2][c:e] = posAll[2][c:e] + currMov[2][c:e];

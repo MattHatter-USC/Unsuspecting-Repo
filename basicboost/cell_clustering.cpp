@@ -89,7 +89,7 @@ static float getrNorm(float currArray[]) {
 
 static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, float pos2y, float pos2z) {
     // returns distance (L2 norm) between two positions in 3D
-    float distArray[3] __attribute__((aligned(64)));
+	__attribute__((aligned(64))) float distArray[3];
     distArray[0] = pos2x-pos1x;
     distArray[1] = pos2y-pos1y;
     distArray[2] = pos2z-pos1z;
@@ -125,9 +125,9 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 	{
 		int c, c2, e; //i1, i2, i3;
 		e = 16;
-		int i1[16] __attribute__((aligned(64)));
-		int i2[16] __attribute__((aligned(64)));
-		int i3[16] __attribute__((aligned(64)));
+		__attribute__((aligned(64))) int i1[16];
+		__attribute__((aligned(64))) int i2[16];
+		__attribute__((aligned(64))) int i3[16];
 
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
@@ -165,7 +165,7 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 	{
 		float con = D / 6.0;
 		int i1, i2, i3, subInd, e;
-		float temp[L] __attribute__((aligned(64)));
+		__attribute__((aligned(64))) float temp[L];
 		int LM = L - 1;
 		int LMM = L - 2;
 		//tempCpn
@@ -251,10 +251,10 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 	{
 		int c, i, e;
 		int newcellnum;
-		float currentrNorm[16] __attribute__((aligned(64)));;
+		__attribute__((aligned(64))) float currentrNorm[16];
 		float currentrNorm2;
-		float currentCellMovement[3][16] __attribute__((aligned(64)));;
-		float duplicatedCellOffset[3] __attribute__((aligned(64)));;
+		__attribute__((aligned(64))) float currentCellMovement[3][16];
+		__attribute__((aligned(64))) float duplicatedCellOffset[3];
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
@@ -307,6 +307,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 
 
 static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
+	#pragma vector aligned	
 	runDiffusionClusterStep_sw.reset();
 	// computes movements of all cells based on gradients of the two substances
 
@@ -324,13 +325,13 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 	{
 		//int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
 		//int[][] i[3][16];
-		int i[3] __attribute__((aligned(64)));
-		int up[3][16] __attribute__((aligned(64)));
-		int down[3][16] __attribute__((aligned(64)));;
-		float normGrad1[16] __attribute__((aligned(64)));; //just reuse so we don't need to allocate more
-		float normGrad2[16] __attribute__((aligned(64)));;
-		float gradsub1[3][16] __attribute__((aligned(64)));;
-		float gradsub2[3][16] __attribute__((aligned(64)));;
+		__attribute__((aligned(64)))int i[3];
+		__attribute__((aligned(64)))int up[3][16];
+		__attribute__((aligned(64)))int down[3][16];
+		__attribute__((aligned(64)))float normGrad1[16]; //just reuse so we don't need to allocate more
+		__attribute__((aligned(64)))float normGrad2[16];
+		__attribute__((aligned(64)))float gradsub1[3][16];
+		__attribute__((aligned(64)))float gradsub2[3][16];
 		int e,c;
 		int i1, i2, i3,it;
 		int cit;
@@ -458,11 +459,11 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 
 
    // float** posSubvol=0;    // array of all 3 dimensional cell positions
-	float** posSubvol = new float*[3];
+	float** posSubvol = (float**)_mm_malloc(sizeof(float*)*3, 64);
 	for (int i = 0; i < 3; ++i) {
-		posSubvol[i] = new float[n];
+		posSubvol[i] = (float*)_mm_malloc(sizeof(float)*n, 64);
 	}
-    int typesSubvol[n]  __attribute__((aligned(64)));
+	__attribute__((aligned(64))) int typesSubvol[n];
 
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
 
@@ -498,7 +499,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i1, i2, it, e;
-		float currDist[16] __attribute__((aligned(64)));
+		__attribute__((aligned(64))) float currDist[16];
 		//float expanded[3][16];
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
@@ -600,12 +601,12 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
     int sameTypeClose=0; // number of cells of the same type, and that are close (i.e. within a distance of spatialRange)
     int diffTypeClose=0; // number of cells of opposite types, and that are close (i.e. within a distance of spatialRange)
 
-    float** posSubvol = new float*[3];    // array of all 3 dimensional cell positions in the subcube
+    float** posSubvol = (float**)_mm_malloc(sizeof(float*)*3, 64);    // array of all 3 dimensional cell positions in the subcube
 	int i;
 	for (i = 0; i < 3; ++i) {
-		posSubvol[i] = new float[n];
+		posSubvol[i] = (float*)_mm_malloc(sizeof(float)*n, 64);
 	}
-    int typesSubvol[n] __attribute__((aligned(64)));
+	__attribute__((aligned(64))) int typesSubvol[n];
 
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
 
@@ -658,7 +659,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
 	#pragma omp parallel default(shared) if (parallels)
 	{
-		float currDist[16] __attribute__((aligned(64)));
+		__attribute__((aligned(64))) float currDist[16];
 		//__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
 		#pragma omp for
@@ -830,18 +831,18 @@ int main(int argc, char *argv[]) {
 
     float energy;   // value that quantifies the quality of the cell clustering output. The smaller this value, the better the clustering.
 
-    float** posAll= new float*[3];   // array of all 3 dimensional cell positions
+    float** posAll= (float**)_mm_malloc(sizeof(float*)*3, 64);   // array of all 3 dimensional cell positions
 	//float **** concref = new float ***[2]; //0 for center, 1 for north, 2 for south, 3 for east, 4 for west
 	//concref[0] = new float **[7];
 	//concref[1] = new float **[7];
     //posAll = new float*[3]; //SWITCH THESE DIMENSIONS LATER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     float** currMov=0;  // array of all 3 dimensional cell movements at the last time point
-    currMov = new float*[3]; // array of all cell movements in the last time step
+    currMov = (float**)_mm_malloc(sizeof(float*) * 3, 64); // array of all cell movements in the last time step
     float zeroFloat = 0.0;
 
-    float pathTraveled[finalNumberCells] __attribute__((aligned(64)));   // array keeping track of length of path traveled until cell divides
-	int numberDivisions[finalNumberCells] __attribute__((aligned(64)));  //array keeping track of number of division a cell has undergone
-	int typesAll[finalNumberCells] __attribute__((aligned(64)));     // array specifying cell type (+1 or -1)
+	__attribute__((aligned(64))) float pathTraveled[finalNumberCells];   // array keeping track of length of path traveled until cell divides
+	__attribute__((aligned(64))) int numberDivisions[finalNumberCells];  //array keeping track of number of division a cell has undergone
+	__attribute__((aligned(64))) int typesAll[finalNumberCells];   // array specifying cell type (+1 or -1)
 
     numberDivisions[0]=0;   // the first cell has initially undergone 0 duplications (= divisions)
     typesAll[0]=1;  // the first cell is of type 1
@@ -868,18 +869,18 @@ int main(int argc, char *argv[]) {
     // create 3D concentration matrix
     float**** Conc; //we also need to rearrange the dimensions on this
 	//float**** tempConc;
-    Conc = new float***[2]; //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
+    Conc = (float****)_mm_malloc(sizeof(float***)*2, 64); //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
 	//tempConc = new float***[2];
 	//int i22, i33;
 	for (i1 = 0; i1 < 2; ++i1) {
-		Conc[i1] = new float**[L];
+		Conc[i1] = (float***)_mm_malloc(sizeof(float**)*L, 64);
 		//tempConc[i1] = new float**[L];
 		#pragma omp parallel default(shared) if (parallels && false)
 		{
 		int i22, i33;
 			#pragma omp for
 			for (i22 = 0; i22 < L; ++i22) {
-				Conc[i1][i22] = new float*[L];
+				Conc[i1][i22] = (float**)_mm_malloc(sizeof(float*)*L, 64);
 				//tempConc[i1][i22] = new float*[L];
 				for (i33 = 0; i33 < L; ++i33) {
 					Conc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
@@ -894,8 +895,8 @@ int main(int argc, char *argv[]) {
 
 	int halfsies = (int)(0.5*(float)L);
 	int sub;
-	int up[3] __attribute__((aligned(64)));
-	int down[3] __attribute__((aligned(64)));
+	__attribute__((aligned(64))) int up[3];
+	__attribute__((aligned(64))) int down[3];
 	/*for (sub = 0; sub < 2; ++sub) {
 		for (i1 = 0; i1 < 5; ++i1) {
 			concref[sub][i1] = new float*[finalNumberCells];

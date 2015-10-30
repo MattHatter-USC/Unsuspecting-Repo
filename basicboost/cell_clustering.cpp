@@ -103,19 +103,19 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
 //couldn't find parallel library defines for these :(
 
 //#define min(x,y) (((x) < (y)) ? (x) : (y))
-__attribute__((vector)) inline float & min(float & x, float & y) {
+__attribute__((vector)) inline float min(float x, float y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline int & min(int & x, int & y) {
+__attribute__((vector)) inline int min(int x, int y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline float & max(float & x, float & y) {
+__attribute__((vector)) inline float & max(float x, float y) {
 	return (((x) > (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline float & max(int & x, int & y) {
+__attribute__((vector)) inline int & max(int x, int y) {
 	return (((x) > (y)) ? (x) : (y));
 }
 
@@ -668,7 +668,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 				//posSubvol[0][subvolnum] = posAll[0][i1];
 				//posSubvol[1][subvolnum] = posAll[1][i1];
 				//posSubvol[2][subvolnum] = posAll[2][i1];
-				posSubvol[0:2][subvolnu] = posAll[0:2][i1]; //I'm sorry for thrashing yew ._.
+				posSubvol[0:2][subvolnum] = posAll[0:2][i1]; //I'm sorry for thrashing yew ._.
 				typesSubvol[subvolnum] = typesAll[i1];
 			}
 		}

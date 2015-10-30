@@ -335,6 +335,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int e,c;
 		int i1, i2, i3,it;
 		int cit;
+		#pragma vector aligned
+		#pragma vector nontemporal
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);
@@ -357,6 +359,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 				gradsub1[2][cit] = Conc[1][i[0]][i[1]][up[2][it]] - Conc[1][i[0]][i[1]][down[2][it]];
 			}
 			for (it = 0; it < 3; ++it) {
+				#pragma vector aligned
+				#pragma vector nontemporal
 				gradsub1[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
 				gradsub2[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
 			}
@@ -382,12 +386,18 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			*/
 			//normGrad1 = getNorm(gradsub1);
 			//normGrad2 = getNorm(gradsub2);
+			#pragma vector aligned //throw them everywhere just to be safe y'know
+			#pragma vector nontemporal
 			normGrad1[0:e] = gradsub1[0][0:e] * gradsub1[0][0:e] + gradsub1[1][0:e] * gradsub1[1][0:e] + gradsub1[2][0:e] * gradsub1[2][0:e];
 			vsSqrt((MKL_INT)e, normGrad1, normGrad1);
 			//normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
+			#pragma vector aligned
+			#pragma vector nontemporal
 			normGrad2[0:e] = gradsub2[0][0:e] * gradsub2[0][0:e] + gradsub2[1][0:e] * gradsub2[1][0:e] + gradsub2[2][0:e] * gradsub2[2][0:e];
 			vsSqrt((MKL_INT)e, normGrad2, normGrad2);
 			if ((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0)) {
+				#pragma vector aligned
+				#pragma vector nontemporal
 				movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0)); //try replacing with && later
 				movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
 				movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
@@ -659,6 +669,8 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
 	#pragma omp parallel default(shared) if (parallels)
 	{
+		#pragma vector aligned
+		#pragma vector nontemporal
 		__attribute__((aligned(64))) float currDist[16];
 		//__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
@@ -670,6 +682,8 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; i2+=16) {
 				e = min(16,nrCellsSubVol-i2);
 				//ipe = i2 + e; 
+				#pragma vector aligned
+				#pragma vector nontemporal
 				currDist[0:e] = getL2DistanceSq(posSubvol[0][i1] - posSubvol[0][i2:e], posSubvol[1][i1] - posSubvol[1][i2:e], posSubvol[2][i1] - posSubvol[2][i2:e]);
 				//getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
 				for (it = 0; it < e; ++it) {

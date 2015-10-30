@@ -41,7 +41,7 @@
 #include <getopt.h>
 #include "util.hpp"
 //#include <tbb/tbb.h>
-#include <algorithm>
+//#include <algorithm>
 //#include <mkl.h> 
 #include <omp.h>
 #include <cmath>
@@ -52,6 +52,8 @@ using namespace std;
 //using namespace tbb;
 static int quiet = 0;
 static bool halfway = false;
+
+
 
 static float RandomFloatPos() {
     // returns a random number between a given minimum and maximum
@@ -96,6 +98,27 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
     float l2Norm = getNorm(distArray);
     return l2Norm;
 }
+
+
+//couldn't find parallel library defines for these :(
+
+//#define min(x,y) (((x) < (y)) ? (x) : (y))
+__attribute__((vector)) inline float & min(float & x, float & y) {
+	return (((x) < (y)) ? (x) : (y));
+}
+
+__attribute__((vector)) inline float & min(int & x, int & y) {
+	return (((x) < (y)) ? (x) : (y));
+}
+
+__attribute__((vector)) inline float & max(float & x, float & y) {
+	return (((x) > (y)) ? (x) : (y));
+}
+
+__attribute__((vector)) inline float & max(int & x, int & y) {
+	return (((x) > (y)) ? (x) : (y));
+}
+
 
 __attribute__((vector)) inline float  getL2DistanceSq(float dx,float dy,float dz) {
 	// returns distance (L2 norm) between two positions in 3D
@@ -186,6 +209,8 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 			for (i2 = 0; i2 < L; ++i2) {
 				int added = 2;
 				for (subInd = 0; subInd < 2; subInd++) {
+					#pragma vector aligned
+					#pragma vector nontemporal
 					temp[0:L] = 0.0;
 					if ((i1 + 1) < L) {
 						temp[0:L] += Conc[subInd][i1+1][i2][0:L];
@@ -306,7 +331,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 }
 
 
-static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
+static void runDiffusionClusterStep(float****restrict Conc, float**restrict movVec, float**restrict posAll, int*restrict typesAll, int n, int L, float speed) {
 	#pragma vector aligned	
 	runDiffusionClusterStep_sw.reset();
 	// computes movements of all cells based on gradients of the two substances
@@ -337,20 +362,22 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int cit;
 		#pragma vector aligned
 		#pragma vector nontemporal
+		up[0][it] = min((i1 + 1), L - 1);
+		down[0][it] = max((i1 - 1), 0);
+		up[1][it] = min((i2 + 1), L - 1);
+		down[1][it] = max((i2 - 1), 0);
+		up[2][it] = min((i3 + 1), L - 1);
+		down[2][it] = max((i3 - 1), 0);
+		#pragma vector aligned
+		#pragma vector nontemporal
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);
 			for (it = 0; it < e; ++it) {
 				cit = c + it;
-				i[0] = std::min((int)(posAll[0][cit] * rsidelength), (L - 1));
-				i[1] = std::min((int)(posAll[1][cit] * rsidelength), (L - 1));
-				i[2] = std::min((int)(posAll[2][cit] * rsidelength), (L - 1));
-				up[0][it] = std::min((i1 + 1), L - 1);
-				down[0][it] = std::max((i1 - 1), 0);
-				up[1][it] = std::min((i2 + 1), L - 1);
-				down[1][it] = std::max((i2 - 1), 0);
-				up[2][it] = std::min((i3 + 1), L - 1);
-				down[2][it] = std::max((i3 - 1), 0);
+				i[0] = min((int)(posAll[0][cit] * rsidelength), (L - 1));
+				i[1] = min((int)(posAll[1][cit] * rsidelength), (L - 1));
+				i[2] = min((int)(posAll[2][cit] * rsidelength), (L - 1));
 				gradsub1[0][cit] = Conc[0][up[0][it]][i[1]][i[2]] - Conc[0][down[0][it]][i[1]][i[2]]; //redo wiff ze mappingz
 				gradsub1[1][cit] = Conc[0][i[0]][up[1][it]][i[2]] - Conc[0][i[0]][down[1][it]][i[2]];
 				gradsub1[2][cit] = Conc[0][i[0]][i[1]][up[2][it]] - Conc[0][i[0]][i[1]][down[2][it]];
@@ -497,9 +524,9 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 				{
 					currsubvol = nrCellsSubVol++; //iterate after
 				}
-				posSubvol[0][currsubvol] = posAll[0][i1];
-				posSubvol[1][currsubvol] = posAll[1][i1];
-				posSubvol[2][currsubvol] = posAll[2][i1];
+				#pragma vector aligned
+				#pragma vector nontemporal
+				posSubvol[0:2][currsubvol] = posAll[0:2][i1]; //#thrash life
 				typesSubvol[nrCellsSubVol] = typesAll[i1];
 			}
 		}
@@ -636,9 +663,12 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 				{
 					subvolnum = nrCellsSubVol++;
 				}
-				posSubvol[0][subvolnum] = posAll[0][i1];
-				posSubvol[1][subvolnum] = posAll[1][i1];
-				posSubvol[2][subvolnum] = posAll[2][i1];
+				#pragma vector aligned
+				#pragma vector nontemporal
+				//posSubvol[0][subvolnum] = posAll[0][i1];
+				//posSubvol[1][subvolnum] = posAll[1][i1];
+				//posSubvol[2][subvolnum] = posAll[2][i1];
+				posSubvol[0:2][subvolnu] = posAll[0:2][i1]; //I'm sorry for thrashing yew ._.
 				typesSubvol[subvolnum] = typesAll[i1];
 			}
 		}
@@ -669,16 +699,11 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
 	#pragma omp parallel default(shared) if (parallels)
 	{
-		#pragma vector aligned
-		#pragma vector nontemporal
 		__attribute__((aligned(64))) float currDist[16];
 		//__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
-			for (it = 0; it < 3; ++it) { //save a few operations
-				//expanded[it][0:16] = posSubvol[it][i1];
-			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; i2+=16) {
 				e = min(16,nrCellsSubVol-i2);
 				//ipe = i2 + e; 

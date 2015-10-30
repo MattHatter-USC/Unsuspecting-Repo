@@ -107,7 +107,7 @@ __attribute__((vector)) inline float & min(float & x, float & y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline float & min(int & x, int & y) {
+__attribute__((vector)) inline int & min(int & x, int & y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
@@ -331,7 +331,7 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 }
 
 
-static void runDiffusionClusterStep(float****restrict Conc, float**restrict movVec, float**restrict posAll, int*restrict typesAll, int n, int L, float speed) {
+static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
 	#pragma vector aligned	
 	runDiffusionClusterStep_sw.reset();
 	// computes movements of all cells based on gradients of the two substances

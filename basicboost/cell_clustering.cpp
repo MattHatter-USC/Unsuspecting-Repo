@@ -158,6 +158,7 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 			//for (c = 0; c < n; ++c) {
 			#pragma vector nontemporal
 			#pragma vector aligned
+
 			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
 			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
 			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
@@ -228,6 +229,8 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 						temp[0:L] += Conc[subInd][i1][i2 - 1][0:L];
 						++added;
 					}
+					#pragma vector aligned
+					#pragma nontemporal
 					temp[0:LM] += Conc[subInd][i1][i2][1:LM];
 					temp[1:LM] += Conc[subInd][i1][i2][0:LM];
 					temp[1:LMM] -= added*Conc[subInd][i1][i2][1:LMM];
@@ -258,7 +261,9 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 		#pragma omp for
 		for (i1 = 0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; i2++) {
-
+				#pragma vector aligned
+				#pragma nontemporal
+				#pragma ivdep
 				Conc[0][i1][i2][0:L] *= val;
 				Conc[1][i1][i2][0:L] *= val;
 			}
@@ -268,7 +273,6 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 }
 
 static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* typesAll, int* numberDivisions, float pathThreshold, int divThreshold, int n) {
-	#pragma vector aligned
     cellMovementAndDuplication_sw.reset();
 	//int div = min(n / 20, 500); //figure this out later
 	int currentNumberCells = n;
@@ -290,8 +294,13 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 				currentCellMovement[2][i] = RandomFloatPos() - 0.5;
 			}
 			//currentNorm = getNorm(currentCellMovement);
+			#pragma vector aligned
+			#pragma nontemporal
+			#pragma ivdep
 			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][0:e]* currentCellMovement[0][0:e] + currentCellMovement[1][0:e]*currentCellMovement[1][0:e] + currentCellMovement[2][0:e]*currentCellMovement[2][0:e]);
-
+			#pragma vector aligned
+			#pragma nontemporal
+			#pragma ivdep
 			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
 			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];
 			posAll[2][c:e] += 0.1*currentCellMovement[2][0:e] * currentrNorm[0:e];
@@ -362,19 +371,23 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int cit;
 		#pragma vector aligned
 		#pragma vector nontemporal
-		up[0][it] = min((i1 + 1), L - 1);
-		down[0][it] = max((i1 - 1), 0);
-		up[1][it] = min((i2 + 1), L - 1);
-		down[1][it] = max((i2 - 1), 0);
-		up[2][it] = min((i3 + 1), L - 1);
-		down[2][it] = max((i3 - 1), 0);
-		#pragma vector aligned
-		#pragma vector nontemporal
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);
+			#pragma vector aligned
+			#pragma vector nontemporal
+			#pragma ivdep
+			up[0][0:e] = min((i1 + 1), L - 1);
+			down[0][0:e] = max((i1 - 1), 0);
+			up[1][0:e] = min((i2 + 1), L - 1);
+			down[1][0:e] = max((i2 - 1), 0);
+			up[2][0:e] = min((i3 + 1), L - 1);
+			down[2][0:e] = max((i3 - 1), 0);
 			for (it = 0; it < e; ++it) {
 				cit = c + it;
+				#pragma vector aligned
+				#pragma vector nontemporal
+				#pragma ivdep
 				i[0] = min((int)(posAll[0][cit] * rsidelength), (L - 1));
 				i[1] = min((int)(posAll[1][cit] * rsidelength), (L - 1));
 				i[2] = min((int)(posAll[2][cit] * rsidelength), (L - 1));
@@ -926,6 +939,9 @@ int main(int argc, char *argv[]) {
 					//tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
 					//for (i4 = 0; i4 < L; i4++) {
 					//tempConc[i1][i2][i3][0:L] = zeroFloat;
+					#pragma vector aligned
+					#pragma ivdep
+					#pragma vector nontemporal
 					Conc[i1][i22][i33][0:L] = zeroFloat;
 				}
 			}
@@ -996,6 +1012,7 @@ int main(int argc, char *argv[]) {
 		phase2_sw.reset();
 		halfway = true;
 		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
+		return 0;
 		/*fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "produceSubstances_TIME", produceSubstances_sw.elapsed, produceSubstances_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDiffusionStep_TIME", runDiffusionStep_sw.elapsed, runDiffusionStep_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDecayStep_TIME", runDecayStep_sw.elapsed, runDecayStep_sw.elapsed*100.0f / compute_sw.elapsed);

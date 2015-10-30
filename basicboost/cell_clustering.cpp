@@ -111,11 +111,11 @@ __attribute__((vector)) inline int min(int x, int y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline float & max(float x, float y) {
+__attribute__((vector)) inline float max(float x, float y) {
 	return (((x) > (y)) ? (x) : (y));
 }
 
-__attribute__((vector)) inline int & max(int x, int y) {
+__attribute__((vector)) inline int max(int x, int y) {
 	return (((x) > (y)) ? (x) : (y));
 }
 

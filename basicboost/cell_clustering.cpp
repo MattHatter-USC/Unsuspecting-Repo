@@ -377,15 +377,15 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			*/
 			//normGrad1 = getNorm(gradsub1);
 			//normGrad2 = getNorm(gradsub2);
-			normGrad1[c:e] = gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e];
-			vsSqrt((MKL_INT)e, normGrad1 + c, normGrad1 + c);
+			normGrad1[0:e] = gradsub1[0][0:e] * gradsub1[0][0:e] + gradsub1[1][0:e] * gradsub1[1][0:e] + gradsub1[2][0:e] * gradsub1[2][0:e];
+			vsSqrt((MKL_INT)e, normGrad1, normGrad1);
 			//normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
-			normGrad2[c:e] = gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e];
-			vsSqrt((MKL_INT)e, normGrad2 + c, normGrad2 + c);
+			normGrad2[0:e] = gradsub2[0][0:e] * gradsub2[0][0:e] + gradsub2[1][0:e] * gradsub2[1][0:e] + gradsub2[2][0:e] * gradsub2[2][0:e];
+			vsSqrt((MKL_INT)e, normGrad2, normGrad2);
 			if ((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0)) {
-				movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
-				movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
-				movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
+				movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0)); //try replacing with && later
+				movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
+				movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
 			}
 		}
 	}
@@ -915,15 +915,15 @@ int main(int argc, char *argv[]) {
 		while (n<finalNumberCells) {
 			//fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
-			fprintf(stderr, "producin'");
+			//fprintf(stderr, "producin'");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");
-			fprintf(stderr, "diffusin'");
+			//fprintf(stderr, "diffusin'");
 			runDiffusionStep(Conc, L, D); // Simulation of substance diffusion
 			//fprintf(stderr, "not broken3\n");
-			fprintf(stderr, "decayin'");
+			//fprintf(stderr, "decayin'");
 			runDecayStep(Conc, L, mu);
-			fprintf(stderr, "movin'");
+			//fprintf(stderr, "movin'");
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
@@ -951,8 +951,8 @@ int main(int argc, char *argv[]) {
 		phase1_sw.mark();
 		phase2_sw.reset();
 		halfway = true;
-		/*fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
-		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "produceSubstances_TIME", produceSubstances_sw.elapsed, produceSubstances_sw.elapsed*100.0f / compute_sw.elapsed);
+		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
+		/*fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "produceSubstances_TIME", produceSubstances_sw.elapsed, produceSubstances_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDiffusionStep_TIME", runDiffusionStep_sw.elapsed, runDiffusionStep_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDecayStep_TIME", runDecayStep_sw.elapsed, runDecayStep_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "cellMovementAndDuplication_TIME", cellMovementAndDuplication_sw.elapsed, cellMovementAndDuplication_sw.elapsed*100.0f / compute_sw.elapsed);
@@ -982,7 +982,7 @@ int main(int argc, char *argv[]) {
 				printf("\n");
 
 			if (i == 0) {
-				fprintf(stderr, "getenergy");
+				fprintf(stderr, "getenergy\n");
 				energy = getEnergy(posAll, typesAll, n, spatialRange, 10000);
 				fprintf(stderr, "getcriterion");
 				currCriterion = getCriterion(posAll, typesAll, n, spatialRange, 10000);
@@ -991,7 +991,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (i == (T - 1)) {
-				fprintf(stderr, "getenergy");
+				fprintf(stderr, "getenergy\n");
 				energy = getEnergy(posAll, typesAll, n, spatialRange, 10000);
 				fprintf(stderr, "getcriterion");
 				currCriterion = getCriterion(posAll, typesAll, n, spatialRange, 10000);
@@ -1001,13 +1001,13 @@ int main(int argc, char *argv[]) {
 			}
 
 			//perhaps combine these four into one thing:
-			fprintf(stderr, "produce");
+			fprintf(stderr, "produce\n");
 			produceSubstances(Conc, posAll, typesAll, L, n);
-			fprintf(stderr, "diffuse");
+			fprintf(stderr, "diffuse\n");
 			runDiffusionStep(Conc, L, D);
-			fprintf(stderr, "decay");
+			fprintf(stderr, "decay\n");
 			runDecayStep(Conc, L, mu);
-			fprintf(stderr, "cluster");
+			fprintf(stderr, "cluster\n");
 			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
 			#pragma omp parallel default(shared) if (parallels && false)

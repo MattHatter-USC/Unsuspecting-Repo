@@ -157,19 +157,20 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
     runDiffusionStep_sw.reset();
     // computes the changes in substance concentrations due to diffusion
     //float tempConc[2][L][L][L]; //holy jesus pls no
-	float con = D / 6.0;
 	#pragma omp parallel default(shared) if (parallels)
 	{
+		float con = D / 6.0;
 		int i1, i2, i3, subInd, e;
 		float temp[L];
 		int LM = L - 1;
 		int LMM = L - 2;
+		//tempCpn
 		//#pragma omp for
 		//for (int i1 = 0; i1 < L; ++i1) {
-		//	for (int i2 = 0; i2 < L; ++i2) {
-		//		tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
-		//		tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
-		//	}
+			///for (int i2 = 0; i2 < L; ++i2) {
+				//tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
+				//tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
+			//}
 		//}
 		//int xUp, xDown, yUp, yDown, zUp, zDown;
 		//int up[3][16];
@@ -228,8 +229,8 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 		#pragma omp for
 		for (i1 = 0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; i2++) {
-				Conc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L] * val;
-				Conc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L] * val;
+				Conc[0][i1][i2][0:L] *= val;
+				Conc[1][i1][i2][0:L] *= val;
 			}
 		}
 	}
@@ -238,19 +239,19 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 
 static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* typesAll, int* numberDivisions, float pathThreshold, int divThreshold, int n) {
     cellMovementAndDuplication_sw.reset();
-	int div = min(n / 20, 500); //figure this out later
+	//int div = min(n / 20, 500); //figure this out later
 	int currentNumberCells = n;
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int c, i, e;
 		int newcellnum;
-		float currentrNorm[16];
+		float currentrNorm[64];
 		float currentrNorm2;
-		float currentCellMovement[3][16];
+		float currentCellMovement[3][64];
 		float duplicatedCellOffset[3];
 		#pragma omp for
-		for (c = 0; c < n; c += 16) {
-			e = min(16, (int)n - c);	 //size of stream
+		for (c = 0; c < n; c += 64) {
+			e = min(64, (int)n - c);	 //size of stream
 			// random cell movement
 			for (i = 0; i < e; ++i) {
 				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
@@ -283,9 +284,10 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 						duplicatedCellOffset[2] = RandomFloatPos() - 0.5;
 						//currentNorm = getNorm(duplicatedCellOffset);
 						currentrNorm2 = 1.0 / getNorm(duplicatedCellOffset);
-						posAll[0][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[0] * currentrNorm2;
-						posAll[1][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[1] * currentrNorm2;
-						posAll[2][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[2] * currentrNorm2;
+						posAll[0:3][newcellnum] = posAll[0:3][i];
+						posAll[0:3][newcellnum] *= 0.05*duplicatedCellOffset[0:3] * currentrNorm2;
+						//posAll[1][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[1] * currentrNorm2;
+						//posAll[2][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[2] * currentrNorm2;
 
 					}
 

@@ -51,6 +51,7 @@
 using namespace std;
 //using namespace tbb;
 static int quiet = 0;
+static bool halfway = false;
 
 static float RandomFloatPos() {
     // returns a random number between a given minimum and maximum
@@ -96,7 +97,7 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
     return l2Norm;
 }
 
-__attribute__((vector)) inline float getL2DistanceSq(float dx,float dy,float dz) {
+__attribute__((vector)) float inline void getL2DistanceSq(float dx,float dy,float dz) {
 	// returns distance (L2 norm) between two positions in 3D
 	return dx*dx+dy*dy+dz*dz;
 }
@@ -114,6 +115,9 @@ static stopwatch compute_sw;
 static stopwatch init_sw;
 
 static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int L, int n) {
+	if (halfway) {
+		fprintf(stderr, "substanceproduce");
+	}
 	produceSubstances_sw.reset();
 
 	// increases the concentration of substances at the location of the cells
@@ -303,6 +307,9 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 
 static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
 	runDiffusionClusterStep_sw.reset();
+	if (halfway) {
+		fprintf(stderr, "diffcluster");
+	}
 	// computes movements of all cells based on gradients of the two substances
 
 	float sideLength = 1 / (float)L; // length of a side of a diffusion voxel
@@ -381,10 +388,11 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			//normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
 			normGrad2[c:e] = gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e];
 			vsSqrt((MKL_INT)e, normGrad2 + c, normGrad2 + c);
-
-			movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
-			movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
-			movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
+			if ((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0)) {
+				movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
+				movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
+				movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0));
+			}
 		}
 	}
 	runDiffusionClusterStep_sw.mark();
@@ -446,6 +454,9 @@ static void runClusterStep(float**** Conc, float** movVec, float** posAll, int* 
 */
 static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getEnergy_sw.reset();
+	if (halfway) {
+		fprintf(stderr, "getenergy");
+	}
     // Computes an energy measure of clusteredness within a subvolume. The size of the subvolume
     // is computed by assuming roughly uniform distribution within the whole volume, and selecting
     // a volume comprising approximately targetN cells.
@@ -491,24 +502,22 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	float spatialRangeSq = spatialRange*spatialRange;
 	#pragma omp parallel default(shared) if (parallels)
 	{
-	//parallel_for(blocked_range(0, nrCellsSubVol), [&](const blocked_range<size_t>& x) {
-		//float currDist;
 		int i1, i2, it, e;
 		float currDist[16];
-		float expanded[3][16];
+		//float expanded[3][16];
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
 			for (it = 0; it < 3; ++it) { //save a few operations
-				expanded[it][0:16] = posSubvol[it][i1];
+				//expanded[it][0:16] = posSubvol[it][i1];
 			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
 				e = min(16, (int)nrCellsSubVol);
-				currDist[0:e] = sqrtf(getL2DistanceSq(expanded[0][0:e]-posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				currDist[0:e] = sqrtf(getL2DistanceSq(posSubvol[0][i1]; -posSubvol[0][i2:e], posSubvol[1][i1]; - posSubvol[1][i2:e], posSubvol[2][i1]; - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				for (it = 0; it < i2 + e; ++it) { //could maybe vectorize this
 					if (currDist[it] < spatialRangeSq) {
 						++nrSmallDist;//currDist/spatialRange;
 						if (typesSubvol[i1] * typesSubvol[i2] > 0) {
-							intraClusterEnergy = intraClusterEnergy + fmin(100.0, spatialRange / currDist[it]); //only perform costly sqrt when necessary
+							intraClusterEnergy = intraClusterEnergy + fmin(100.0, spatialRange / currDist[it]); 
 						}
 						else {
 							extraClusterEnergy = extraClusterEnergy + fmin(100.0, spatialRange / currDist[it]); //''
@@ -589,6 +598,9 @@ class llist {
 
 static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getCriterion_sw.reset();
+	if (halfway) {
+		fprintf(stderr, "getcriterion");
+	}
     // Returns 0 if the cell locations within a subvolume of the total system, comprising approximately targetN cells,
     // are arranged as clusters, and 1 otherwise.
 
@@ -617,7 +629,10 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 		#pragma omp for
 		for (i1 = 0; i1 < n; ++i1) {
 			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
-				subvolnum = nrCellsSubVol++;
+				#pragma omp critical
+				{
+					subvolnum = nrCellsSubVol++;
+				}
 				posSubvol[0][subvolnum] = posAll[0][i1];
 				posSubvol[1][subvolnum] = posAll[1][i1];
 				posSubvol[2][subvolnum] = posAll[2][i1];
@@ -652,17 +667,17 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		__declspec(align(64)) float currDist[16];
-		__declspec(align(64)) float expanded[3][16];
+		//__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
 			for (it = 0; it < 3; ++it) { //save a few operations
-				expanded[it][0:16] = posSubvol[it][i1];
+				//expanded[it][0:16] = posSubvol[it][i1];
 			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; i2+=16) {
 				e = min(16,nrCellsSubVol-i2);
 				//ipe = i2 + e; 
-				currDist[0:e] = getL2DistanceSq(expanded[0][0:e] - posSubvol[0][i2:e], expanded[1][0:e] - posSubvol[1][i2:e], expanded[2][0:e] - posSubvol[2][i2:e]);
+				currDist[0:e] = getL2DistanceSq(posSubvol[0][i1] - posSubvol[0][i2:e], posSubvol[1][i1] - posSubvol[1][i2:e], posSubvol[2][i1] - posSubvol[2][i2:e]);
 				//getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
 				for (it = 0; it < e; ++it) {
 					if (currDist[it] < spatialRangeSq) {
@@ -943,7 +958,8 @@ int main(int argc, char *argv[]) {
 		}
 		phase1_sw.mark();
 		phase2_sw.reset();
-		fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
+		halfway = true;
+		/*fprintf(stderr, "%-35s = %le s\n",  "PHASE1_TIME", phase1_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "produceSubstances_TIME", produceSubstances_sw.elapsed, produceSubstances_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDiffusionStep_TIME", runDiffusionStep_sw.elapsed, runDiffusionStep_sw.elapsed*100.0f / compute_sw.elapsed);
 		fprintf(stderr, "%-35s = %le s (%3.2f %%)\n", "runDecayStep_TIME", runDecayStep_sw.elapsed, runDecayStep_sw.elapsed*100.0f / compute_sw.elapsed);
@@ -955,7 +971,7 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "==================================================\n");
 
-		return 0;
+		return 0;*/
 		// Phase 2: Cells move along the substance gradients and cluster
 
 		for (i = 0; i < T; i++) {
@@ -989,13 +1005,13 @@ int main(int argc, char *argv[]) {
 			}
 
 			//perhaps combine these four into one thing:
-
+			
 			produceSubstances(Conc, posAll, typesAll, L, n);
 			runDiffusionStep(Conc, L, D);
 			runDecayStep(Conc, L, mu);
 			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-			#pragma omp parallel default(shared) if (parallels)
+			#pragma omp parallel default(shared) if (parallels && false)
 			{
 				int e;
 				#pragma omp for

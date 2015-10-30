@@ -89,7 +89,7 @@ static float getrNorm(float currArray[]) {
 
 static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, float pos2y, float pos2z) {
     // returns distance (L2 norm) between two positions in 3D
-    float distArray[3];
+    float distArray[3] __attribute__((aligned(64)));
     distArray[0] = pos2x-pos1x;
     distArray[1] = pos2y-pos1y;
     distArray[2] = pos2z-pos1z;
@@ -125,14 +125,16 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 	{
 		int c, c2, e; //i1, i2, i3;
 		e = 16;
-		int i1[16];
-		int i2[16];
-		int i3[16];
+		int i1[16] __attribute__((aligned(64)));
+		int i2[16] __attribute__((aligned(64)));
+		int i3[16] __attribute__((aligned(64)));
 
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			if (n - c < 16) { e = (int)n - c; }
 			//for (c = 0; c < n; ++c) {
+			#pragma vector nontemporal
+			#pragma vector aligned
 			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
 			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
 			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
@@ -163,7 +165,7 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 	{
 		float con = D / 6.0;
 		int i1, i2, i3, subInd, e;
-		float temp[L];
+		float temp[L] __attribute__((aligned(64)));
 		int LM = L - 1;
 		int LMM = L - 2;
 		//tempCpn
@@ -231,6 +233,7 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 		#pragma omp for
 		for (i1 = 0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; i2++) {
+
 				Conc[0][i1][i2][0:L] *= val;
 				Conc[1][i1][i2][0:L] *= val;
 			}
@@ -240,6 +243,7 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 }
 
 static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* typesAll, int* numberDivisions, float pathThreshold, int divThreshold, int n) {
+	#pragma vector aligned
     cellMovementAndDuplication_sw.reset();
 	//int div = min(n / 20, 500); //figure this out later
 	int currentNumberCells = n;
@@ -247,10 +251,10 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 	{
 		int c, i, e;
 		int newcellnum;
-		float currentrNorm[16];
+		float currentrNorm[16] __attribute__((aligned(64)));;
 		float currentrNorm2;
-		float currentCellMovement[3][16];
-		float duplicatedCellOffset[3];
+		float currentCellMovement[3][16] __attribute__((aligned(64)));;
+		float duplicatedCellOffset[3] __attribute__((aligned(64)));;
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
@@ -320,13 +324,13 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 	{
 		//int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
 		//int[][] i[3][16];
-		int i[3];
-		int up[3][16];
-		int down[3][16];
-		float normGrad1[16]; //just reuse so we don't need to allocate more
-		float normGrad2[16];
-		float gradsub1[3][16];
-		float gradsub2[3][16];
+		int i[3] __attribute__((aligned(64)));
+		int up[3][16] __attribute__((aligned(64)));
+		int down[3][16] __attribute__((aligned(64)));;
+		float normGrad1[16] __attribute__((aligned(64)));; //just reuse so we don't need to allocate more
+		float normGrad2[16] __attribute__((aligned(64)));;
+		float gradsub1[3][16] __attribute__((aligned(64)));;
+		float gradsub2[3][16] __attribute__((aligned(64)));;
 		int e,c;
 		int i1, i2, i3,it;
 		int cit;
@@ -458,7 +462,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	for (int i = 0; i < 3; ++i) {
 		posSubvol[i] = new float[n];
 	}
-    int typesSubvol[n];
+    int typesSubvol[n]  __attribute__((aligned(64)));
 
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
 
@@ -494,7 +498,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i1, i2, it, e;
-		float currDist[16];
+		float currDist[16] __attribute__((aligned(64)));
 		//float expanded[3][16];
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
@@ -601,7 +605,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 	for (i = 0; i < 3; ++i) {
 		posSubvol[i] = new float[n];
 	}
-    int typesSubvol[n];
+    int typesSubvol[n] __attribute__((aligned(64)));
 
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
 
@@ -654,7 +658,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 
 	#pragma omp parallel default(shared) if (parallels)
 	{
-		__declspec(align(64)) float currDist[16];
+		float currDist[16] __attribute__((aligned(64)));
 		//__declspec(align(64)) float expanded[3][16];
 		int i1,it, i2, e,ipe;
 		#pragma omp for
@@ -835,9 +839,9 @@ int main(int argc, char *argv[]) {
     currMov = new float*[3]; // array of all cell movements in the last time step
     float zeroFloat = 0.0;
 
-    __declspec(align(64)) float pathTraveled[finalNumberCells];   // array keeping track of length of path traveled until cell divides
-	__declspec(align(64)) int numberDivisions[finalNumberCells];  //array keeping track of number of division a cell has undergone
-	__declspec(align(64)) int typesAll[finalNumberCells];     // array specifying cell type (+1 or -1)
+    float pathTraveled[finalNumberCells] __attribute__((aligned(64)));   // array keeping track of length of path traveled until cell divides
+	int numberDivisions[finalNumberCells] __attribute__((aligned(64)));  //array keeping track of number of division a cell has undergone
+	int typesAll[finalNumberCells] __attribute__((aligned(64)));     // array specifying cell type (+1 or -1)
 
     numberDivisions[0]=0;   // the first cell has initially undergone 0 duplications (= divisions)
     typesAll[0]=1;  // the first cell is of type 1
@@ -890,8 +894,8 @@ int main(int argc, char *argv[]) {
 
 	int halfsies = (int)(0.5*(float)L);
 	int sub;
-	__declspec(align(64)) int up[3];
-	__declspec(align(64)) int down[3];
+	int up[3] __attribute__((aligned(64)));
+	int down[3] __attribute__((aligned(64)));
 	/*for (sub = 0; sub < 2; ++sub) {
 		for (i1 = 0; i1 < 5; ++i1) {
 			concref[sub][i1] = new float*[finalNumberCells];

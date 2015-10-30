@@ -42,11 +42,13 @@
 #include "util.hpp"
 //#include <tbb/tbb.h>
 #include <algorithm>
-//#include <mkl.h>
+//#include <mkl.h> 
 #include <omp.h>
 #include <cmath>
+#include <mkl.h>
+//#include <cmath>
 //used floating point mode relaxed
-
+using namespace mkl;
 using namespace std;
 //using namespace tbb;
 static int quiet = 0;
@@ -245,13 +247,13 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 	{
 		int c, i, e;
 		int newcellnum;
-		float currentrNorm[64];
+		float currentrNorm[16];
 		float currentrNorm2;
-		float currentCellMovement[3][64];
+		float currentCellMovement[3][16];
 		float duplicatedCellOffset[3];
 		#pragma omp for
-		for (c = 0; c < n; c += 64) {
-			e = min(64, (int)n - c);	 //size of stream
+		for (c = 0; c < n; c += 16) {
+			e = min(16, (int)n - c);	 //size of stream
 			// random cell movement
 			for (i = 0; i < e; ++i) {
 				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
@@ -375,6 +377,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			*/
 			//normGrad1 = getNorm(gradsub1);
 			//normGrad2 = getNorm(gradsub2);
+			normGrad1[c:e] = gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e];
+			normGrad1[c:e] = vsSqrt((MKL_INT)e, normGrad1 + c, normGrad1 + c);
 			normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
 			normGrad2[c:e] = sqrt(gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e]);
 

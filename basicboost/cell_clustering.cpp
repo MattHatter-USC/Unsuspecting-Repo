@@ -298,9 +298,6 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 			#pragma vector nontemporal
 			#pragma ivdep
 			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][0:e]* currentCellMovement[0][0:e] + currentCellMovement[1][0:e]*currentCellMovement[1][0:e] + currentCellMovement[2][0:e]*currentCellMovement[2][0:e]);
-			#pragma vector aligned
-			#pragma vector nontemporal
-			#pragma ivdep
 			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
 			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];
 			posAll[2][c:e] += 0.1*currentCellMovement[2][0:e] * currentrNorm[0:e];
@@ -975,15 +972,15 @@ int main(int argc, char *argv[]) {
 		while (n<finalNumberCells) {
 			//fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
-			//fprintf(stderr, "producin'");
+			fprintf(stderr, "producin'\n");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");
-			//fprintf(stderr, "diffusin'");
+			fprintf(stderr, "diffusin'\n");
 			runDiffusionStep(Conc, L, D); // Simulation of substance diffusion
 			//fprintf(stderr, "not broken3\n");
-			//fprintf(stderr, "decayin'");
+			fprintf(stderr, "decayin'\n");
 			runDecayStep(Conc, L, mu);
-			//fprintf(stderr, "movin'");
+			fprintf(stderr, "movin'\n");
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
@@ -1003,6 +1000,9 @@ int main(int argc, char *argv[]) {
 			}
 			#else
 			for (d = 0; d<3; d++) {
+				#pragma vector aligned
+				#pragma ivdep
+				#pragma vector nontemporal
 				if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
 				if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
 			}

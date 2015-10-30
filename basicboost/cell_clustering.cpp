@@ -157,50 +157,61 @@ static void runDiffusionStep(float **** Conc, float **** tempConc, int L, float 
     runDiffusionStep_sw.reset();
     // computes the changes in substance concentrations due to diffusion
     //float tempConc[2][L][L][L]; //holy jesus pls no
+	float con = D / 6.0;
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i1, i2, i3, subInd, e;
-		#pragma omp for
-		for (int i1 = 0; i1 < L; ++i1) {
-			for (int i2 = 0; i2 < L; ++i2) {
-				tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
-				tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
-			}
-		}
-		int xUp, xDown, yUp, yDown, zUp, zDown;
-		int up[3][16];
-		int down[3][16];
-		
+		float temp[L];
+		int LM = L - 1;
+		int LMM = L - 2;
+		//#pragma omp for
+		//for (int i1 = 0; i1 < L; ++i1) {
+		//	for (int i2 = 0; i2 < L; ++i2) {
+		//		tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
+		//		tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
+		//	}
+		//}
+		//int xUp, xDown, yUp, yDown, zUp, zDown;
+		//int up[3][16];
+		//int down[3][16];
+
 		#pragma omp for     //                  TRY TO PUT PARALLEL FOR ON MIDDLE "FOR" LOOP SO WE CAN  USE MORE THREADING AT ONCE!!!
 		for (i1 =0; i1 < L; ++i1) {
 			//e = min(i1 + 15, (int)n) - i1 + 1; //size of 
 			for (i2 = 0; i2 < L; ++i2) {
-				//for (i3 = 0; i3 < L; ++i3) {
-					//xUp = (i1 + 1);
-					//xDown = (i1 - 1);
-					//yUp = (i2 + 1);
-					//yDown = (i2 - 1);
-					//zUp = (i3 + 1);
-					//zDown = (i3 - 1);
-					
-					for (subInd = 0; subInd < 2; subInd++) {
-						if ((i1 + 1) < L) {
-							Conc[subInd][i1][i2][0:L] += (tempConc[subInd][i1+1][i2][0:L] - tempConc[subInd][i1][i2][0:L])*D / 6;
-						}
-						if ((i1 - 1) >= 0) {
-							Conc[subInd][i1][i2][0:L] += (tempConc[subInd][i1 - 1][i2][0:L] - tempConc[subInd][i1][i2][0:L])*D / 6;
-						}
-						if ((i2 + 1) < L) {
-							Conc[subInd][i1][i2][0:L] += (tempConc[subInd][i1][i2 + 1][0:L] - tempConc[subInd][i1][i2][0:L])*D / 6;
-						}
-						if ((i2 - 1) >= 0) {
-							Conc[subInd][i1][i2][0:L] += (tempConc[subInd][i1][i2 - 1][0:L] - tempConc[subInd][i1][i2][0:L])*D / 6;
-						}
-						Conc[subInd][i1][i2][0:(L - 1)] += (tempConc[subInd][i1][i2][1:(L - 1)] - tempConc[subInd][i1][i2][0:(L - 1)])*D / 6;
-						Conc[subInd][i1][i2][1:(L - 1)] += (tempConc[subInd][i1][i2][0:(L - 1)] - tempConc[subInd][i1][i2][1:(L - 1)])*D / 6;
-						//lends itself quite well to vectorization
+				int added = 2;
+				for (subInd = 0; subInd < 2; subInd++) {
+					temp[0:L] = 0.0;
+					if ((i1 + 1) < L) {
+						temp[0:L] += Conc[subInd][i1+1][i2][0:L];
+						++added;
 					}
-				//}
+					if ((i1 - 1) >= 0) {
+						temp[0:L] += Conc[subInd][i1 - 1][i2][0:L];
+						++added;
+					}
+					if ((i2 + 1) < L) {
+						temp[0:L] += Conc[subInd][i1][i2 + 1][0:L];
+						++added;
+					}
+					if ((i2 - 1) >= 0) {
+						temp[0:L] += Conc[subInd][i1][i2 - 1][0:L];
+						++added;
+					}
+					temp[0:LM] += Conc[subInd][i1][i2][1:LM];
+					temp[1:LM] += Conc[subInd][i1][i2][0:LM];
+					temp[1:LMM] -= added*Conc[subInd][i1][i2][1:LMM];
+					temp[0] -= (added-1)*Conc[subInd][i1][i2][0];
+					temp[LM] -= (added - 1)*Conc[subInd][i1][i2][LM];
+					temp[0:L] *= con;
+					Conc[subInd][i1][i2][0:L] += temp[0:L]; //sexy
+					//Conc[subInd][i1][i2][0:L] -= added*tempConc[subInd][i1][i2][0:L];
+
+					//Conc[subInd][i1][i2][0:LM] += (tempConc[subInd][i1][i2][1:LM] - tempConc[subInd][i1][i2][0:LM])*con;
+					//Conc[subInd][i1][i2][1:LM] += (tempConc[subInd][i1][i2][0:LM] - tempConc[subInd][i1][i2][1:LM])*con;
+					//conc[subInd][i1][i2][0:L] *= con;
+					//lends itself quite well to vectorization
+				}
 			}
 		}
 	}
@@ -843,23 +854,23 @@ int main(int argc, char *argv[]) {
 
     // create 3D concentration matrix
     float**** Conc; //we also need to rearrange the dimensions on this
-	float**** tempConc;
+	//float**** tempConc;
     Conc = new float***[2]; //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
-	tempConc = new float***[2];
+	//tempConc = new float***[2];
 	//int i22, i33;
 	for (i1 = 0; i1 < 2; ++i1) {
 		Conc[i1] = new float**[L];
-		tempConc[i1] = new float**[L];
+		//tempConc[i1] = new float**[L];
 		#pragma omp parallel default(shared) if (parallels)
 		{
 		int i22, i33;
 			#pragma omp for
 			for (i22 = 0; i22 < L; ++i22) {
 				Conc[i1][i22] = new float*[L];
-				tempConc[i1][i22] = new float*[L];
+				//tempConc[i1][i22] = new float*[L];
 				for (i33 = 0; i33 < L; ++i33) {
 					Conc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
-					tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
+					//tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
 					//for (i4 = 0; i4 < L; i4++) {
 					//tempConc[i1][i2][i3][0:L] = zeroFloat;
 					Conc[i1][i22][i33][0:L] = zeroFloat;

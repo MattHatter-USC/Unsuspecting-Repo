@@ -153,7 +153,7 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
     produceSubstances_sw.mark();
 }
 
-static void runDiffusionStep(float **** Conc, float **** tempConc, int L, float D) {
+static void runDiffusionStep(float **** Conc, int L, float D) {
     runDiffusionStep_sw.reset();
     // computes the changes in substance concentrations due to diffusion
     //float tempConc[2][L][L][L]; //holy jesus pls no
@@ -861,7 +861,7 @@ int main(int argc, char *argv[]) {
 	for (i1 = 0; i1 < 2; ++i1) {
 		Conc[i1] = new float**[L];
 		//tempConc[i1] = new float**[L];
-		#pragma omp parallel default(shared) if (parallels)
+		#pragma omp parallel default(shared) if (parallels && false)
 		{
 		int i22, i33;
 			#pragma omp for
@@ -908,7 +908,7 @@ int main(int argc, char *argv[]) {
 			//fprintf(stderr, "not broken1\n");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");
-			runDiffusionStep(Conc,tempConc, L, D); // Simulation of substance diffusion
+			runDiffusionStep(Conc, L, D); // Simulation of substance diffusion
 			//fprintf(stderr, "not broken3\n");
 			runDecayStep(Conc, L, mu);
 			//fprintf(stderr, "not broken4\n");

@@ -115,9 +115,6 @@ static stopwatch compute_sw;
 static stopwatch init_sw;
 
 static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int L, int n) {
-	if (halfway) {
-		fprintf(stderr, "substanceproduce");
-	}
 	produceSubstances_sw.reset();
 
 	// increases the concentration of substances at the location of the cells
@@ -307,9 +304,6 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 
 static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
 	runDiffusionClusterStep_sw.reset();
-	if (halfway) {
-		fprintf(stderr, "diffcluster");
-	}
 	// computes movements of all cells based on gradients of the two substances
 
 	float sideLength = 1 / (float)L; // length of a side of a diffusion voxel
@@ -454,9 +448,6 @@ static void runClusterStep(float**** Conc, float** movVec, float** posAll, int* 
 */
 static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getEnergy_sw.reset();
-	if (halfway) {
-		fprintf(stderr, "getenergy");
-	}
     // Computes an energy measure of clusteredness within a subvolume. The size of the subvolume
     // is computed by assuming roughly uniform distribution within the whole volume, and selecting
     // a volume comprising approximately targetN cells.
@@ -598,9 +589,6 @@ class llist {
 
 static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getCriterion_sw.reset();
-	if (halfway) {
-		fprintf(stderr, "getcriterion");
-	}
     // Returns 0 if the cell locations within a subvolume of the total system, comprising approximately targetN cells,
     // are arranged as clusters, and 1 otherwise.
 
@@ -927,11 +915,15 @@ int main(int argc, char *argv[]) {
 		while (n<finalNumberCells) {
 			//fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
+			fprintf(stderr, "producin'");
 			produceSubstances(Conc, posAll, typesAll, L, n); // Cells produce substances. Depending on the cell type, one of the two substances is produced.
 			//fprintf(stderr,"not broken2\n");
+			fprintf(stderr, "diffusin'");
 			runDiffusionStep(Conc, L, D); // Simulation of substance diffusion
 			//fprintf(stderr, "not broken3\n");
+			fprintf(stderr, "decayin'");
 			runDecayStep(Conc, L, mu);
+			fprintf(stderr, "movin'");
 			//fprintf(stderr, "not broken4\n");
 			n = cellMovementAndDuplication(posAll, pathTraveled, typesAll, numberDivisions, pathThreshold, divThreshold, n);
 			//fprintf(stderr, "not broken5\n");
@@ -990,14 +982,18 @@ int main(int argc, char *argv[]) {
 				printf("\n");
 
 			if (i == 0) {
+				fprintf(stderr, "getenergy");
 				energy = getEnergy(posAll, typesAll, n, spatialRange, 10000);
+				fprintf(stderr, "getcriterion");
 				currCriterion = getCriterion(posAll, typesAll, n, spatialRange, 10000);
 				fprintf(stderr, "%-35s = %d\n", "INITIAL_CRITERION", currCriterion);
 				fprintf(stderr, "%-35s = %le\n", "INITIAL_ENERGY", energy);
 			}
 
 			if (i == (T - 1)) {
+				fprintf(stderr, "getenergy");
 				energy = getEnergy(posAll, typesAll, n, spatialRange, 10000);
+				fprintf(stderr, "getcriterion");
 				currCriterion = getCriterion(posAll, typesAll, n, spatialRange, 10000);
 				fprintf(stderr, "%-35s = %d\n", "FINAL_CRITERION", currCriterion);
 				fprintf(stderr, "%-35s = %le\n", "FINAL_ENERGY", energy);
@@ -1005,10 +1001,13 @@ int main(int argc, char *argv[]) {
 			}
 
 			//perhaps combine these four into one thing:
-			
+			fprintf(stderr, "produce");
 			produceSubstances(Conc, posAll, typesAll, L, n);
+			fprintf(stderr, "diffuse");
 			runDiffusionStep(Conc, L, D);
+			fprintf(stderr, "decay");
 			runDecayStep(Conc, L, mu);
+			fprintf(stderr, "cluster");
 			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
 			#pragma omp parallel default(shared) if (parallels && false)

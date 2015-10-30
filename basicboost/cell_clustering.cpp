@@ -987,7 +987,7 @@ int main(int argc, char *argv[]) {
 			//perhaps combine these four into one thing:
 
 			produceSubstances(Conc, posAll, typesAll, L, n);
-			runDiffusionStep(Conc, tempConc, L, D);
+			runDiffusionStep(Conc, L, D);
 			runDecayStep(Conc, L, mu);
 			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {

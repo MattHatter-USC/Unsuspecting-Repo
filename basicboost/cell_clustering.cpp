@@ -230,7 +230,7 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 						++added;
 					}
 					#pragma vector aligned
-					#pragma nontemporal
+					#pragma vector nontemporal
 					temp[0:LM] += Conc[subInd][i1][i2][1:LM];
 					temp[1:LM] += Conc[subInd][i1][i2][0:LM];
 					temp[1:LMM] -= added*Conc[subInd][i1][i2][1:LMM];
@@ -262,7 +262,7 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 		for (i1 = 0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; i2++) {
 				#pragma vector aligned
-				#pragma nontemporal
+				#pragma vector nontemporal
 				#pragma ivdep
 				Conc[0][i1][i2][0:L] *= val;
 				Conc[1][i1][i2][0:L] *= val;
@@ -295,11 +295,11 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 			}
 			//currentNorm = getNorm(currentCellMovement);
 			#pragma vector aligned
-			#pragma nontemporal
+			#pragma vector nontemporal
 			#pragma ivdep
 			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][0:e]* currentCellMovement[0][0:e] + currentCellMovement[1][0:e]*currentCellMovement[1][0:e] + currentCellMovement[2][0:e]*currentCellMovement[2][0:e]);
 			#pragma vector aligned
-			#pragma nontemporal
+			#pragma vector nontemporal
 			#pragma ivdep
 			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
 			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];

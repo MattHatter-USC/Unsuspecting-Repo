@@ -48,7 +48,6 @@
 #include <mkl.h>
 //#include <cmath>
 //used floating point mode relaxed
-using namespace mkl;
 using namespace std;
 //using namespace tbb;
 static int quiet = 0;
@@ -323,8 +322,8 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 		int i[3];
 		int up[3][16];
 		int down[3][16];
-		int normGrad1[16]; //just reuse so we don't need to allocate more
-		int normGrad2[16];
+		float normGrad1[16]; //just reuse so we don't need to allocate more
+		float normGrad2[16];
 		float gradsub1[3][16];
 		float gradsub2[3][16];
 		int e,c;
@@ -378,9 +377,10 @@ static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posA
 			//normGrad1 = getNorm(gradsub1);
 			//normGrad2 = getNorm(gradsub2);
 			normGrad1[c:e] = gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e];
-			normGrad1[c:e] = vsSqrt((MKL_INT)e, normGrad1 + c, normGrad1 + c);
-			normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
-			normGrad2[c:e] = sqrt(gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e]);
+			vsSqrt((MKL_INT)e, normGrad1 + c, normGrad1 + c);
+			//normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
+			normGrad2[c:e] = gradsub2[0][c:e] * gradsub2[0][c:e] + gradsub2[1][c:e] * gradsub2[1][c:e] + gradsub2[2][c:e] * gradsub2[2][c:e];
+			vsSqrt((MKL_INT)e, normGrad2 + c, normGrad2 + c);
 
 			movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);
 			movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*(normGrad1[0:e] > 0)* (normGrad2[0:e] > 0);

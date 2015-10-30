@@ -97,7 +97,7 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
     return l2Norm;
 }
 
-__attribute__((vector)) float inline void getL2DistanceSq(float dx,float dy,float dz) {
+__attribute__((vector)) inline float  getL2DistanceSq(float dx,float dy,float dz) {
 	// returns distance (L2 norm) between two positions in 3D
 	return dx*dx+dy*dy+dz*dz;
 }
@@ -512,7 +512,7 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
 				e = min(16, (int)nrCellsSubVol);
-				currDist[0:e] = sqrtf(getL2DistanceSq(posSubvol[0][i1]; -posSubvol[0][i2:e], posSubvol[1][i1]; - posSubvol[1][i2:e], posSubvol[2][i1]; - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				currDist[0:e] = sqrtf(getL2DistanceSq(posSubvol[0][i1] -posSubvol[0][i2:e], posSubvol[1][i1] - posSubvol[1][i2:e], posSubvol[2][i1] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				for (it = 0; it < i2 + e; ++it) { //could maybe vectorize this
 					if (currDist[it] < spatialRangeSq) {
 						++nrSmallDist;//currDist/spatialRange;

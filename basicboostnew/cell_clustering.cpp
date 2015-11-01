@@ -393,8 +393,8 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 		int L2 = L*L;
 		int L3 = L*L*L;
 		{
-			__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i;
-			__m512 type, t1, t2, t3, Lv, a_in, b_in, c_in, d_in, e_in, f_in, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
+			__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i, a_in, b_in, c_in, d_in, e_in, f_in, ;
+			__m512 type, t1, t2, t3, Lv, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
 			__mmask16 comparemask;
 			#pragma omp for
 			for (int iter = 0; iter < endv; iter += 16) {
@@ -424,24 +424,24 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum + iter]), Lv), _MM_FROUND_TO_NEG_INF);
 				c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2 + iter]), Lv), _MM_FROUND_TO_NEG_INF);
 				type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), speed);
-				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(a, 1), 1), c0);
-				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(b, 1), 1), c0);
-				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(c, 1), 1), c0);//twelve
-				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(a, 1), b0, 1), c0);
-				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(b, 1), b0, 1), c0);//john cena
-				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(c, 1), b0, 1), c0);
-				a_in = _mm512_fmadd_ps(_mm512_sub_ps(a, d), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //down
-				b_in = _mm512_fmadd_ps(_mm512_add_ps(a, g), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //up
-				c_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_sub_ps(b, e), c)); //down
-				d_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_add_ps(b, h), c)); //up
-				e_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_sub_ps(c, f))); //down
-				f_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_add_ps(c, i))); //up
-				_mm512_prefetch_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 1, _MM_HINT_NTA);  //WTF DOES THE SCALE DOOO
-				_mm512_prefetch_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 1, _MM_HINT_NTA);
-				_mm512_prefetch_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 1, _MM_HINT_NTA);
-				_mm512_prefetch_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 1, _MM_HINT_NTA);
-				_mm512_prefetch_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
-				_mm512_prefetch_i32gather_ps_mm512_add_ps((f_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(a, 1), 1), c0);
+				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(b, 1), 1), c0);
+				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(c, 1), 1), c0);//twelve
+				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(a, 1), b0, 1), c0);
+				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(b, 1), b0, 1), c0);//john cena
+				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(c, 1), b0, 1), c0);
+				a_in = _mm512_add_epi32(_mm512_mul_epi32(_mm512_sub_epi32(a, d), L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), c)); //down
+				b_in = _mm512_add_epi32(_mm512_mul_epi32(_mm512_add_epi32(a, g), L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), c)); //up
+				c_in = _mm512_add_epi32(_mm512_mul_epi32(a, L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, _mm512_sub_epi32(b, e)), c)); //down
+				d_in = _mm512_add_epi32(_mm512_mul_epi32(a, L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, _mm512_add_epi32(b, h)), c)); //up
+				e_in = _mm512_add_epi32(_mm512_mul_epi32(a, L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), _mm512_sub_epi32(c, f))); //down
+				f_in = _mm512_add_epi32(_mm512_mul_epi32(a, L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), _mm512_add_epi32(c, i))); //up
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(a_in, L3_v), Conc, 1, _MM_HINT_NTA);  //WTF DOES THE SCALE DOOO
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(b_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(c_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(d_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(e_in, L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
+				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(f_in, L3_v), Conc, 1, _MM_HINT_NTA);
 				t1 = _mm512_div_ps(Lv, _mm512_add_ps(d, g));
 				t2 = _mm512_div_ps(Lv, _mm512_add_ps(e, h));
 				t3 = _mm512_div_ps(Lv, _mm512_add_ps(f, i));

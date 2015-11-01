@@ -45,7 +45,6 @@
 //#include <algorithm>
 //#include <mkl.h> 
 #include <omp.h>
-#include "mpi.h"
 #include <cmath>
 #include <immintrin.h>
 #include <mkl.h>

@@ -248,12 +248,12 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 					}
 					fprintf(stderr, "e2\n");
 
-					#pragma vector aligned//just put them everywhere psh
+					//#pragma vector aligned//just put them everywhere psh
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
 					fprintf(stderr, "f\n");
-					#pragma vector aligned
+					//#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[1:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1:LM];
@@ -261,10 +261,10 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
-					temp[1:LMM] -= added*Conc[subInd*lv3 + i1*lv2 + i2*lv1 + 1:LMM];
+					temp[0:L] -= added*Conc[subInd*lv3 + i1*lv2 + i2*lv1:L];
 					fprintf(stderr, "h\n");
-					temp[0] -= (added-1)*Conc[subInd*lv3+i1*lv2+i2*lv1];
-					temp[LM] -= (added - 1)*Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
+					temp[0] += Conc[subInd*lv3+i1*lv2+i2*lv1];
+					temp[LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
@@ -274,7 +274,6 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 					#pragma vector nontemporal
 					#pragma ivdep
 					Conc[subInd*lv3+i1*lv2+i2*lv1:L] += temp[0:L]; //sexy
-
 					//lends itself quite well to vectorization
 				}
 			}

@@ -201,30 +201,36 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 		int LM = L - 1;
 		int LMM = L - 2;
 		__attribute__((aligned(64))) float temp[L];
-		#pragma omp for     //                  TRY TO PUT PARALLEL FO{
+		#pragma omp for     //                  TRY TO PUT PARALLEL FOr
 		for (i1 =0; i1 < L; ++i1) {
 			for (i2 = 0; i2 < L; ++i2) {
 				int added = 2;
 				for (subInd = 0; subInd < 2; subInd++) {
+					fprintf(stderr, "%d, %d\n",i1,i2);
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:L] = 0.0;
 					if ((i1 + 1) < L) {
+						fprintf(stderr, "b\n");
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+(i1+1)*lv2+i2*lv1:L];
 						++added;
 					}
+
 					if ((i1 - 1) >= 0) {
-						#pragma vector aligned
-						#pragma vector nontemporal
+						fprintf(stderr, "c\n");
+
+						#pragma vector aligned nontemporal
 						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+(i1 - 1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i2 + 1) < L) {
+						fprintf(stderr, d\n");
+
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
@@ -232,30 +238,38 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 						++added;
 					}
 					if ((i2 - 1) >= 0) {
+						fprintf(stderr, "e\n");
+
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 - 1)*lv1:L];
 						++added;
 					}
+					fprintf(stderr, "e2\n");
+
 					#pragma vector aligned//just put them everywhere psh
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
+					fprintf(stderr, "f\n");
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[1:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1:LM];
+					fprintf(stderr, "g\n");
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[1:LMM] -= added*Conc[subInd*lv3 + i1*lv2 + i2*lv1 + 1:LMM];
+					fprintf(stderr, "h\n");
 					temp[0] -= (added-1)*Conc[subInd*lv3+i1*lv2+i2*lv1];
 					temp[LM] -= (added - 1)*Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:L] *= con;
+					fprintf(stderr, "i\n");
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep

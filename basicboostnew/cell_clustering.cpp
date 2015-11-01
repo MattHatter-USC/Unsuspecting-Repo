@@ -1,5 +1,6 @@
 /*
 
+
   Copyright (c) 2015, Newcastle University (United Kingdom)
   All rights reserved.
 
@@ -44,7 +45,9 @@
 //#include <algorithm>
 //#include <mkl.h> 
 #include <omp.h>
+#include "mpi.h"
 #include <cmath>
+#include <immintrin.h>
 #include <mkl.h>
 //#include <cmath>
 //used floating point mode relaxed
@@ -52,8 +55,11 @@ using namespace std;
 //using namespace tbb;
 static int quiet = 0;
 static bool halfway = false;
-
-
+static int finalnum;
+static int finalnum2;
+static int lv1;
+static int lv2;
+static int lv3;
 
 static float RandomFloatPos() {
     // returns a random number between a given minimum and maximum
@@ -75,6 +81,8 @@ static float getNorm(float currArray[]) {
 	
     return res;
 }
+
+
 
 static float getrNorm(float currArray[]) {
 	// computes L2 norm of input array
@@ -103,18 +111,22 @@ static float getL2Distance(float pos1x, float pos1y, float pos1z, float pos2x, f
 //couldn't find parallel library defines for these :(
 
 //#define min(x,y) (((x) < (y)) ? (x) : (y))
+#pragma omp declare simd
 __attribute__((vector)) inline float min(float x, float y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
+#pragma omp declare simd
 __attribute__((vector)) inline int min(int x, int y) {
 	return (((x) < (y)) ? (x) : (y));
 }
 
+#pragma omp declare simd
 __attribute__((vector)) inline float max(float x, float y) {
 	return (((x) > (y)) ? (x) : (y));
 }
 
+#pragma omp declare simd
 __attribute__((vector)) inline int max(int x, int y) {
 	return (((x) > (y)) ? (x) : (y));
 }
@@ -137,7 +149,7 @@ static stopwatch phase2_sw;
 static stopwatch compute_sw;
 static stopwatch init_sw;
 
-static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int L, int n) {
+static void produceSubstances(float* Conc, float* posAll, int* typesAll, int L, int n) {
 	produceSubstances_sw.reset();
 
 	// increases the concentration of substances at the location of the cells
@@ -151,7 +163,6 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 		__attribute__((aligned(64))) int i1[16];
 		__attribute__((aligned(64))) int i2[16];
 		__attribute__((aligned(64))) int i3[16];
-
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			if (n - c < 16) { e = (int)n - c; }
@@ -159,20 +170,20 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
 			#pragma vector nontemporal
 			#pragma vector aligned
 
-			i1[0:e] = min((int)(posAll[0][c:e] * rsideLength), (L - 1));
-			i2[0:e] = min((int)(posAll[1][c:e] * rsideLength), (L - 1));
-			i3[0:e] = min((int)(posAll[2][c:e] * rsideLength), (L - 1));
+			i1[0:e] = min((int)(posAll[c:e] * rsideLength), (L - 1));
+			i2[0:e] = min((int)(posAll[finalnum+c:e] * rsideLength), (L - 1));
+			i3[0:e] = min((int)(posAll[finalnum2+c:e] * rsideLength), (L - 1));
 			for (c2 = 0; c2 < e; ++c2) {
 				if (typesAll[c+c2] == 1) {
-					Conc[0][i1[c2]][i2[c2]][i3[c2]] += 0.1;
-					if (Conc[0][i1[c2]][i2[c2]][i3[c2]]> 1) {
-						Conc[0][i1[c2]][i2[c2]][i3[c2]] = 1;
+					Conc[i1[c2]*lv2+i2[c2]*lv1+i3[c2]] += 0.1;
+					if (Conc[i1[c2]*lv2+i2[c2]*lv1+i3[c2]]> 1) {
+						Conc[i1[c2]*lv2+i2[c2]*lv1+i3[c2]] = 1;
 					}
 				}
 				else {
-					Conc[1][i1[c2]][i2[c2]][i3[c2]] += 0.1;
-					if (Conc[1][i1[c2]][i2[c2]][i3[c2]]> 1) {
-						Conc[1][i1[c2]][i2[c2]][i3[c2]] = 1;
+					Conc[lv3+i1[c2]*lv2+i2[c2]*lv1+i3[c2]] += 0.1;
+					if (Conc[lv3+i1[c2]*lv2+i2[c2]*lv1+i3[c2]]> 1) {
+						Conc[lv3+i1[c2]*lv2+i2[c2]*lv1+i3[c2]] = 1;
 					}
 				}
 			}
@@ -181,32 +192,18 @@ static void produceSubstances(float**** Conc, float** posAll, int* typesAll, int
     produceSubstances_sw.mark();
 }
 
-static void runDiffusionStep(float **** Conc, int L, float D) {
+static void runDiffusionStep(float * Conc, int L, float D) {
     runDiffusionStep_sw.reset();
     // computes the changes in substance concentrations due to diffusion
-    //float tempConc[2][L][L][L]; //holy jesus pls no
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		float con = D / 6.0;
 		int i1, i2, i3, subInd, e;
-		__attribute__((aligned(64))) float temp[L];
 		int LM = L - 1;
 		int LMM = L - 2;
-		//tempCpn
-		//#pragma omp for
-		//for (int i1 = 0; i1 < L; ++i1) {
-			///for (int i2 = 0; i2 < L; ++i2) {
-				//tempConc[0][i1][i2][0:L] = Conc[0][i1][i2][0:L];
-				//tempConc[1][i1][i2][0:L] = Conc[1][i1][i2][0:L];
-			//}
-		//}
-		//int xUp, xDown, yUp, yDown, zUp, zDown;
-		//int up[3][16];
-		//int down[3][16];
-
-		#pragma omp for     //                  TRY TO PUT PARALLEL FOR ON MIDDLE "FOR" LOOP SO WE CAN  USE MORE THREADING AT ONCE!!!
+		__attribute__((aligned(64))) float temp[L];
+		#pragma omp for     //                  TRY TO PUT PARALLEL FO{
 		for (i1 =0; i1 < L; ++i1) {
-			//e = min(i1 + 15, (int)n) - i1 + 1; //size of 
 			for (i2 = 0; i2 < L; ++i2) {
 				int added = 2;
 				for (subInd = 0; subInd < 2; subInd++) {
@@ -214,35 +211,30 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
 					#pragma vector nontemporal
 					temp[0:L] = 0.0;
 					if ((i1 + 1) < L) {
-						temp[0:L] += Conc[subInd][i1+1][i2][0:L];
+						temp[0:L] += Conc[subInd*lv3+(i1+1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i1 - 1) >= 0) {
-						temp[0:L] += Conc[subInd][i1 - 1][i2][0:L];
+						temp[0:L] += Conc[subInd*lv3+(i1 - 1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i2 + 1) < L) {
-						temp[0:L] += Conc[subInd][i1][i2 + 1][0:L];
+						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 + 1)*lv1:L];
 						++added;
 					}
 					if ((i2 - 1) >= 0) {
-						temp[0:L] += Conc[subInd][i1][i2 - 1][0:L];
+						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 - 1)*lv1:L];
 						++added;
 					}
 					#pragma vector aligned
 					#pragma vector nontemporal
-					temp[0:LM] += Conc[subInd][i1][i2][1:LM];
-					temp[1:LM] += Conc[subInd][i1][i2][0:LM];
-					temp[1:LMM] -= added*Conc[subInd][i1][i2][1:LMM];
-					temp[0] -= (added-1)*Conc[subInd][i1][i2][0];
-					temp[LM] -= (added - 1)*Conc[subInd][i1][i2][LM];
+					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
+					temp[1:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1:LM];
+					temp[1:LMM] -= added*Conc[subInd*lv3+i1*lv2+i2*lv1+1:LMM];
+					temp[0] -= (added-1)*Conc[subInd*lv3+i1*lv2+i2*lv1];
+					temp[LM] -= (added - 1)*Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
 					temp[0:L] *= con;
-					Conc[subInd][i1][i2][0:L] += temp[0:L]; //sexy
-					//Conc[subInd][i1][i2][0:L] -= added*tempConc[subInd][i1][i2][0:L];
-
-					//Conc[subInd][i1][i2][0:LM] += (tempConc[subInd][i1][i2][1:LM] - tempConc[subInd][i1][i2][0:LM])*con;
-					//Conc[subInd][i1][i2][1:LM] += (tempConc[subInd][i1][i2][0:LM] - tempConc[subInd][i1][i2][1:LM])*con;
-					//conc[subInd][i1][i2][0:L] *= con;
+					Conc[subInd*lv3+i1*lv2+i2*lv1:L] += temp[0:L]; //sexy
 					//lends itself quite well to vectorization
 				}
 			}
@@ -251,7 +243,7 @@ static void runDiffusionStep(float **** Conc, int L, float D) {
     runDiffusionStep_sw.mark();
 }
 
-static void runDecayStep(float**** Conc, int L, float mu) {
+static void runDecayStep(float* Conc, int L, float mu) {
     runDecayStep_sw.reset();
     // computes the changes in substance concentrations due to decay
 	float val = (1 - mu);
@@ -264,44 +256,53 @@ static void runDecayStep(float**** Conc, int L, float mu) {
 				#pragma vector aligned
 				#pragma vector nontemporal
 				#pragma ivdep
-				Conc[0][i1][i2][0:L] *= val;
-				Conc[1][i1][i2][0:L] *= val;
+				Conc[i1*lv2+i2*lv1:L] *= val;
+				Conc[lv3+i1*lv2+i2*lv1:L] *= val;
 			}
 		}
 	}
     runDecayStep_sw.mark();
 }
 
-static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* typesAll, int* numberDivisions, float pathThreshold, int divThreshold, int n) {
+static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* typesAll, int* numberDivisions, float pathThreshold, int divThreshold, int n) {
     cellMovementAndDuplication_sw.reset();
 	//int div = min(n / 20, 500); //figure this out later
 	int currentNumberCells = n;
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int c, i, e;
+		__attribute__((aligned(64))) float currenttrNorm[16];
 		int newcellnum;
-		__attribute__((aligned(64))) float currentrNorm[16];
 		float currentrNorm2;
-		__attribute__((aligned(64))) float currentCellMovement[3][16];
-		__attribute__((aligned(64))) float duplicatedCellOffset[3];
+		__attribute__((aligned(64))) float currentCellMovement[3*16];
+		__attribute__((aligned(64))) float  duplicatedCellOffset[3]; 
+		int endv = (n / 16) * 16;
 		#pragma omp for
 		for (c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
 			// random cell movement
 			for (i = 0; i < e; ++i) {
-				currentCellMovement[0][i] = RandomFloatPos() - 0.5;
-				currentCellMovement[1][i] = RandomFloatPos() - 0.5;
-				currentCellMovement[2][i] = RandomFloatPos() - 0.5;
+				currentCellMovement[i] = RandomFloatPos() - 0.5;
+				currentCellMovement[16+i] =  RandomFloatPos() - 0.5;
+				currentCellMovement[32 + i] = RandomFloatPos() - 0.5;
 			}
 			//currentNorm = getNorm(currentCellMovement);
 			#pragma vector aligned
 			#pragma vector nontemporal
-			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0][0:e]* currentCellMovement[0][0:e] + currentCellMovement[1][0:e]*currentCellMovement[1][0:e] + currentCellMovement[2][0:e]*currentCellMovement[2][0:e]);
-			posAll[0][c:e] += 0.1*currentCellMovement[0][0:e] * currentrNorm[0:e];
-			posAll[1][c:e] += 0.1*currentCellMovement[1][0:e] * currentrNorm[0:e];
-			posAll[2][c:e] += 0.1*currentCellMovement[2][0:e] * currentrNorm[0:e];
+			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0:e]* currentCellMovement[0:e] + currentCellMovement[16:e]*currentCellMovement[16:e] + currentCellMovement[32:e]*currentCellMovement[32:e]);
+			#pragma vector aligned
+			#pragma vector nontemporal
+			posAll[c:e] += 0.1*currentCellMovement[0:e] * currentrNorm[0:e];
+			#pragma vector aligned
+			#pragma vector nontemporal
+			posAll[finalnum+c:e] += 0.1*currentCellMovement[16:e] * currentrNorm[16:e];
+			#pragma vector aligned
+			#pragma vector nontemporal
+			posAll[finalnum2+c:e] += 0.1*currentCellMovement[32:e] * currentrNorm[32:e];
+			#pragma vector aligned
+			#pragma vector nontemporal
 			pathTraveled[c:e] += 0.1;
-			for (i = c; i < (e+c); ++i) { //we'll figure this out later
+			for (i = c; i < e; ++i) { //we'll figure this out later
 				// cell duplication if conditions fulfilled
 				if (numberDivisions[i] < divThreshold) {
 					if (pathTraveled[i] > pathThreshold) {
@@ -320,197 +321,131 @@ static int cellMovementAndDuplication(float** posAll, float* pathTraveled, int* 
 						duplicatedCellOffset[2] = RandomFloatPos() - 0.5;
 						//currentNorm = getNorm(duplicatedCellOffset);
 						currentrNorm2 = 1.0 / getNorm(duplicatedCellOffset);
-						posAll[0:3][newcellnum] = posAll[0:3][i];
-						posAll[0:3][newcellnum] *= 0.05*duplicatedCellOffset[0:3] * currentrNorm2;
-						//posAll[1][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[1] * currentrNorm2;
-						//posAll[2][newcellnum] = posAll[0][i] + 0.05*duplicatedCellOffset[2] * currentrNorm2;
-
+						#pragma ivdep
+						#pragma vector nontemporal
+						#pragma vector aligned
+						posAll[newcellnum:finalnum2:finalnum] = posAll[i:finalnum2:finalnum];
+						#pragma ivdep
+						#pragma vector nontemporal
+						#pragma vector aligned
+						posAll[newcellnum:finalnum2:finalnum] *= 0.05*duplicatedCellOffset[0:3] * currentrNorm2;
 					}
 
 				}
 			}
+
 		}
 	}
     cellMovementAndDuplication_sw.mark();
     return currentNumberCells;
 }
 
-
-static void runDiffusionClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
-	#pragma vector aligned	
+static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, int* typesAll, int n, int L, float speed) {
 	runDiffusionClusterStep_sw.reset();
 	// computes movements of all cells based on gradients of the two substances
-
 	float sideLength = 1 / (float)L; // length of a side of a diffusion voxel
 	float rsidelength = (float)L;
-	//float gradsub1[3];
-	//float gradsub2[3];
-
-	//float normGrad1, normGrad2;
-	//int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
-
-	//(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-
-	#pragma omp parallel default(shared) if (parallels)
+#pragma omp parallel default(shared)  if(parallels)
 	{
-		//int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
-		//int[][] i[3][16];
-		__attribute__((aligned(64)))int i[3];
-		__attribute__((aligned(64)))int up[3][16];
-		__attribute__((aligned(64)))int down[3][16];
-		__attribute__((aligned(64)))float normGrad1[16]; //just reuse so we don't need to allocate more
-		__attribute__((aligned(64)))float normGrad2[16];
-		__attribute__((aligned(64)))float gradsub1[3][16];
-		__attribute__((aligned(64)))float gradsub2[3][16];
-		int e,c;
-		int i1, i2, i3,it;
-		int cit;
-		#pragma vector aligned
-		#pragma vector nontemporal
-		#pragma omp for
-		for (c = 0; c < n; c += 16) {
-			e = min(16, (int)n - c);
-			#pragma vector aligned
-			#pragma vector nontemporal
-			#pragma ivdep
-			up[0][0:e] = min((i1 + 1), L - 1);
-			down[0][0:e] = max((i1 - 1), 0);
-			up[1][0:e] = min((i2 + 1), L - 1);
-			down[1][0:e] = max((i2 - 1), 0);
-			up[2][0:e] = min((i3 + 1), L - 1);
-			down[2][0:e] = max((i3 - 1), 0);
-			for (it = 0; it < e; ++it) {
-				cit = c + it;
-				#pragma vector aligned
-				#pragma vector nontemporal
-				#pragma ivdep
-				i[0] = min((int)(posAll[0][cit] * rsidelength), (L - 1));
-				i[1] = min((int)(posAll[1][cit] * rsidelength), (L - 1));
-				i[2] = min((int)(posAll[2][cit] * rsidelength), (L - 1));
-				gradsub1[0][cit] = Conc[0][up[0][it]][i[1]][i[2]] - Conc[0][down[0][it]][i[1]][i[2]]; //redo wiff ze mappingz
-				gradsub1[1][cit] = Conc[0][i[0]][up[1][it]][i[2]] - Conc[0][i[0]][down[1][it]][i[2]];
-				gradsub1[2][cit] = Conc[0][i[0]][i[1]][up[2][it]] - Conc[0][i[0]][i[1]][down[2][it]];
-				gradsub1[0][cit] = Conc[1][up[0][it]][i[1]][i[2]] - Conc[1][down[0][it]][i[1]][i[2]];
-				gradsub1[1][cit] = Conc[1][i[0]][up[1][it]][i[2]] - Conc[1][i[0]][down[1][it]][i[2]];
-				gradsub1[2][cit] = Conc[1][i[0]][i[1]][up[2][it]] - Conc[1][i[0]][i[1]][down[2][it]];
-			}
-			for (it = 0; it < 3; ++it) {
-				#pragma vector aligned
-				#pragma vector nontemporal
-				gradsub1[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
-				gradsub2[it][0:e] /= (sideLength*(up[it][0:e] - down[it][0:e]));
-			}
-			//i1 = std::min((int)floor(posAll[c][0] * rsidelength), (L - 1));
-			//i2 = std::min((int)floor(posAll[c][1] * rsidelength), (L - 1));
-			//i3 = std::min((int)floor(posAll[c][2] * rsidelength), (L - 1));
-			/*
-			up[0][c:e] = (L - 1) - (i[0][c:e] < (L - 2))*(L - 2 - i[0][c:e]);
-			up[1][c:e] = (L - 1) - (i[1][c:e] < (L - 2))*(L - 2 - i[1][c:e]);
-			up[2][c:e] = (L - 1) - (i[2][c:e] < (L - 2))*(L - 2 - i[2][c:e]);
-			down[c:e] = ((i[0][c:e] - 1) > 0)*(i[0][c:e] - 1);
-			down[c:e] = ((i[1][c:e] - 1) > 0)*(i[1][c:e] - 1);
-			down[c:e] = ((i[2][c:e] - 1) > 0)*(i[2][c:e] - 1);
-			
+		//imma pragma yo momma
+		//TODO: dsadsa
+		int c;
+		float gradSub1[3];
+		float gradSub2[3];
 
-			gradsub1[0][c:e] = (Conc[0][up[0][c:e]][i[1][c:e]][i[2][c:e]] - Conc[0][down[0][c:e]][i[1][c:e]][i[2][c:e]]) / (sideLength*(up[0][c:e] - down[0][c:e]));
-			gradsub1[1][c:e] = (Conc[0][i[0][c:e]][up[1][c:e]][i[2][c:e]] - Conc[0][i[0][c:e]][down[1][c:e]][i[2][c:e]]) / (sideLength*(up[1][c:e] - down[1][c:e]));
-			gradsub1[2][c:e] = (Conc[0][i[0][c:e]][i[1][c:e]][up[2][c:e]] - Conc[0][i[0][c:e]][i[1][c:e]][down[2][c:e]]) / (sideLength*(up[2][c:e] - down[2][c:e]));
+		float normGrad1, normGrad2;
+		int i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
+		//for (int c = 0; c < n; ++c)
+#pragma ivdep
+#pragma vector nontemporal
+#pragma vector aligned
+		int endv = (n / 16) * 16;
+		int L2 = L*L;
+		int L3 = L*L*L;
+		int iter;
+		__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i;
+		__m512 type, t1, t2, t3, Lv, a_in, b_in, c_in, d_in, e_in, f_in, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
+		__mmask16 comparemask;
+		for (iter; iter < endv; iter += 16) {
+			//spoiler alert, I am jesus
+			//important commands:
+			//_mm512_stream_ps(void* mem_addr, __m512 a) (for saving shit)
+			//_mm512_fmadd_ps(__m512 a, __m512 b, __m512 c) mult a and b, add c
+			//_mm512_mul_ps(__m512 a, __m512db) mult a and b
+			//_mm512_add_ps(__m512 a,__m512 b) add a and b
+			//_mm512_div_round_ps(__m512 a, __m512 b, _MM_FROUND_TO_NEAREST_INT);
 
-			gradsub2[0][c:e] = (Conc[1][up[0][c:e]][i[1][c:e]][i[2][c:e]] - Conc[1][down[0][c:e]][i[1][c:e]][i[2][c:e]]) / (sideLength*(up[0][c:e] - down[0][c:e]));
-			gradsub2[1][c:e] = (Conc[1][i[0][c:e]][up[1][c:e]][i[2][c:e]] - Conc[1][i[0][c:e]][down[1][c:e]][i[2][c:e]]) / (sideLength*(up[1][c:e] - down[1][c:e]));
-			gradsub2[2][c:e] = (Conc[1][i[0][c:e]][i[1][c:e]][up[2][c:e]] - Conc[1][i[0][c:e]][i[1][c:e]][down[2][c:e]]) / (sideLength*(up[2][c:e] - down[2][c:e]));
-			*/
-			//normGrad1 = getNorm(gradsub1);
-			//normGrad2 = getNorm(gradsub2);
-			#pragma vector aligned //throw them everywhere just to be safe y'know
-			#pragma vector nontemporal
-			normGrad1[0:e] = gradsub1[0][0:e] * gradsub1[0][0:e] + gradsub1[1][0:e] * gradsub1[1][0:e] + gradsub1[2][0:e] * gradsub1[2][0:e];
-			vsSqrt((MKL_INT)e, normGrad1, normGrad1);
-			//normGrad1[c:e] = sqrt(gradsub1[0][c:e] * gradsub1[0][c:e] + gradsub1[1][c:e] * gradsub1[1][c:e] + gradsub1[2][c:e] * gradsub1[2][c:e]);
-			#pragma vector aligned
-			#pragma vector nontemporal
-			normGrad2[0:e] = gradsub2[0][0:e] * gradsub2[0][0:e] + gradsub2[1][0:e] * gradsub2[1][0:e] + gradsub2[2][0:e] * gradsub2[2][0:e];
-			vsSqrt((MKL_INT)e, normGrad2, normGrad2);
-			if ((normGrad1[0:e] > 0) && (normGrad2[0:e] > 0)) {
-				#pragma vector aligned
-				#pragma vector nontemporal
-				movVec[0][c:e] = typesAll[c:e] * (gradsub1[0][0:e] / normGrad1[0:e] - gradsub2[0][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0)); //try replacing with && later
-				movVec[1][c:e] = typesAll[c:e] * (gradsub1[1][0:e] / normGrad1[0:e] - gradsub2[1][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
-				movVec[2][c:e] = typesAll[c:e] * (gradsub1[2][0:e] / normGrad1[0:e] - gradsub2[2][0:e] / normGrad2[0:e])*speed*((normGrad1[0:e] > 0) * (normGrad2[0:e] > 0));
-			}
+
+			//__nmask16 comparemask;
+			a0 = _mm512_setzero_epi32();
+			b0 = _mm512_set1_epi32(L - 1);
+			c0 = _mm512_set1_epi32(1);
+			Lv = _mm512_set1_ps((float)L);
+			//if ((c + 31) < endv) { //prefetchhh
+			//	_mm_prefetch((char*), _MM_HINT_T0
+			//}
+			//do le prefetching hereish?
+			L1_v = _mm512_set1_epi32(L); //no relation to the cache ;)
+			L2_v = _mm512_set1_epi32(L2);
+			L3_v = _mm512_set1_epi32(L3);
+			//loop begin //perhaps declare all vars below outside loop
+			a = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[iter]), Lv), _MM_FROUND_TO_NEG_INF); //goood stuff
+			b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum+iter]), Lv), _MM_FROUND_TO_NEG_INF);
+			c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2+iter]), Lv), _MM_FROUND_TO_NEG_INF);
+			type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), speed);
+			d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(a, 1), 1), c0);
+			e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(b, 1), 1), c0);
+			f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(c, 1), 1), c0);//twelve
+			g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(a, 1), b0, 1), c0);
+			h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(b, 1), b0, 1), c0);//john cena
+			i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(c, 1), b0, 1), c0);
+			a_in = _mm512_fmadd_ps(_mm512_sub_ps(a, d), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //down
+			b_in = _mm512_fmadd_ps(_mm512_add_ps(a, g), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //up
+			c_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_sub_ps(b, e), c)); //down
+			d_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_add_ps(b, h), c)); //up
+			e_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_sub_ps(c, f))); //down
+			f_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_add_ps(c, i))); //up
+			_mm512_prefetch_i32gather_ps((a_in + L3_v), Conc, 1, _MM_HINT_NTA);  //WTF DOES THE SCALE DOOO
+			_mm512_prefetch_i32gather_ps((b_in + L3_v), Conc, 1, _MM_HINT_NTA);
+			_mm512_prefetch_i32gather_ps((c_in + L3_v), Conc, 1, _MM_HINT_NTA);
+			_mm512_prefetch_i32gather_ps((d_in + L3_v), Conc, 1, _MM_HINT_NTA);
+			_mm512_prefetch_i32gather_ps((e_in + L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
+			_mm512_prefetch_i32gather_ps((f_in + L3_v), Conc, 1, _MM_HINT_NTA);
+			t1 = _mm512_div_ps(Lv, _mm512_add_ps(d, g));
+			t2 = _mm512_div_ps(Lv, _mm512_add_ps(e, h));
+			t3 = _mm512_div_ps(Lv, _mm512_add_ps(f, i));
+			GS10 = _mm512_mul_ps((_mm512_i32gather_ps(b_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(a_in, Conc, 4, _MM_HINT_NTA)), t1);
+			GS11 = _mm512_mul_ps((_mm512_i32gather_ps(d_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(c_in, Conc, 4, _MM_HINT_NTA)), t2);
+			GS12 = _mm512_mul_ps((_mm512_i32gather_ps(f_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(e_in, Conc, 4, _MM_HINT_NTA)), t3);
+			preval1 = _mm512_fmadd_ps(GS10, GS10, _mm512_fmadd_ps(GS11, GS11, _mm512_mul_ps(GS12, GS12))); //beautiful
+			norm1 = _mm512_rsqrt28_ps(preval2);
+			GS20 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 4, _MM_HINT_NTA)), t1);
+			GS21 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 4, _MM_HINT_NTA)), t2);
+			GS22 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(f_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 4, _MM_HINT_NTA)), t3);
+			preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
+			norm2 = _mm512_rsqrt28_ps(preval2);
+			comparemask = _mm512_kand(_mm512_cmp_epi32_masks(a0, preval1), _mm512_cmp_epi32_masks(a0, preval2));
+			t1 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
+			t2 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
+			t3 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
+			_mm512_stream_ps(&movVec[iter], t1); //saves
+			_mm512_stream_ps(&movVec[finalnum+iter], t2);
+			_mm512_stream_ps(&movVec[finalnum2+iter], t3);
 		}
 	}
+
 	runDiffusionClusterStep_sw.mark();
 }
 
-/*
-static void runClusterStep(float**** Conc, float** movVec, float** posAll, int* typesAll, int n, int L, float speed) {
-    runDiffusionClusterStep_sw.reset();
-    // computes movements of all cells based on gradients of the two substances
-
-    float sideLength = 1/(float)L; // length of a side of a diffusion voxel
-
-    float gradsub1[3];
-    float gradsub2[3];
-
-    float normGrad1, normGrad2;
-    int c, i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
-	parallel_for(blocked_range(0, n), 1000, [&](const blocked_range<size_t>& x) {
-		for (c = x.begin(); c < x.end(); ++c) {
-			i1[c:e] = (L - 1) - (int)(posAll[c][0]/sideLength);
-			i1 = std::min((int)floor(posAll[c][0] / sideLength), (L - 1));
-			i2 = std::min((int)floor(posAll[c][1] / sideLength), (L - 1));
-			i3 = std::min((int)floor(posAll[c][2] / sideLength), (L - 1));
-			
-
-
-			//split this into 3 different cases, one for i1 = 0, one for i1 = L-1
-			xUp = std::min((i1 + 1), L - 1);
-			xDown = std::max((i1 - 1), 0);
-			yUp = std::min((i2 + 1), L - 1);
-			yDown = std::max((i2 - 1), 0);
-			zUp = std::min((i3 + 1), L - 1);
-			zDown = std::max((i3 - 1), 0);
-
-			gradsub1[0] = (Conc[0][xUp][i2][i3] - Conc[0][xDown][i2][i3]) / (sideLength*(xUp - xDown));
-			gradsub1[1] = (Conc[0][i1][yUp][i3] - Conc[0][i1][yDown][i3]) / (sideLength*(yUp - yDown));
-			gradsub1[2] = (Conc[0][i1][i2][zUp] - Conc[0][i1][i2][zDown]) / (sideLength*(zUp - zDown));
-
-			gradsub2[0] = (Conc[1][xUp][i2][i3] - Conc[1][xDown][i2][i3]) / (sideLength*(xUp - xDown));
-			gradsub2[1] = (Conc[1][i1][yUp][i3] - Conc[1][i1][yDown][i3]) / (sideLength*(yUp - yDown));
-			gradsub2[2] = (Conc[1][i1][i2][zUp] - Conc[1][i1][i2][zDown]) / (sideLength*(zUp - zDown));
-
-			//normGrad1 = getNorm(gradsub1);
-			//normGrad2 = getNorm(gradsub2);
-			rnormGrad1 = 1/getNorm(gradsub1);
-			rnormGrad2 = 1/getNorm(gradsub2);
-
-			if ((normGrad1 > 0) && (normGrad2 > 0)) {
-				movVec[c][0:3] = typesAll[c] * (gradsub1[0:3] / normGrad1 - gradsub2[0:3] / normGrad2)*speed;
-			}
-
-			else {
-				movVec[c][0:3] = 0;
-			}
-		}
-    }
-    runDiffusionClusterStep_sw.mark();
-}
-*/
-static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
+static float getEnergy(float* posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getEnergy_sw.reset();
     // Computes an energy measure of clusteredness within a subvolume. The size of the subvolume
     // is computed by assuming roughly uniform distribution within the whole volume, and selecting
     // a volume comprising approximately targetN cells.
 
 
-   // float** posSubvol=0;    // array of all 3 dimensional cell positions
-	float** posSubvol = (float**)_mm_malloc(sizeof(float*)*3, 64);
-	for (int i = 0; i < 3; ++i) {
-		posSubvol[i] = (float*)_mm_malloc(sizeof(float)*n, 64);
-	}
-	__attribute__((aligned(64))) int typesSubvol[n];
-
+	float * posSubvol = (float*)_mm_malloc(sizeof(float)*3 * n,64);
+	int * typesSubvol = (int*)_mm_malloc(sizeof(int) * n, 64);
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
 
     if(quiet < 1)
@@ -528,14 +463,15 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 		int i1, i2;
 		#pragma omp for
 		for (i1 = 0; i1 < n; ++i1) {
-			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
+			if ((fabs(posAll[i1] - 0.5) < subVolMax) && (fabs(posAll[finalnum+i1] - 0.5) < subVolMax) && (fabs(posAll[finalnum2+i1] - 0.5) < subVolMax)) {
 				#pragma omp critical  //yay
 				{
 					currsubvol = nrCellsSubVol++; //iterate after
 				}
 				#pragma vector aligned
 				#pragma vector nontemporal
-				posSubvol[0:2][currsubvol] = posAll[0:2][i1]; //#thrash life
+				#pragma ivdep
+				posSubvol[currsubvol:finalnum2:finalnum] = posAll[i1:finalnum2: finalnum]; //#thrash life
 				typesSubvol[nrCellsSubVol] = typesAll[i1];
 			}
 		}
@@ -546,15 +482,11 @@ static float getEnergy(float** posAll, int* typesAll, int n, float spatialRange,
 	{
 		int i1, i2, it, e;
 		__attribute__((aligned(64))) float currDist[16];
-		//float expanded[3][16];
 		#pragma omp for
 		for (i1 = 0; i1 < nrCellsSubVol; ++i1) {
-			for (it = 0; it < 3; ++it) { //save a few operations
-				//expanded[it][0:16] = posSubvol[it][i1];
-			}
 			for (i2 = i1 + 1; i2 < nrCellsSubVol; ++i2) {
 				e = min(16, (int)nrCellsSubVol);
-				currDist[0:e] = sqrtf(getL2DistanceSq(posSubvol[0][i1] -posSubvol[0][i2:e], posSubvol[1][i1] - posSubvol[1][i2:e], posSubvol[2][i1] - posSubvol[2][i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				currDist[0:e] = sqrtf(getL2DistanceSq(posSubvol[i1] -posSubvol[i2:e], posSubvol[finalnum+i1] - posSubvol[finalnum+i2:e], posSubvol[finalnum2+i1] - posSubvol[finalnum2+i2:e])); //make sure is vectorizing!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				for (it = 0; it < i2 + e; ++it) { //could maybe vectorize this
 					if (currDist[it] < spatialRangeSq) {
 						++nrSmallDist;//currDist/spatialRange;
@@ -638,7 +570,7 @@ class llist {
 	}
 }*/
 
-static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRange, int targetN) {
+static bool getCriterion(float* posAll, int* typesAll, int n, float spatialRange, int targetN) {
     getCriterion_sw.reset();
     // Returns 0 if the cell locations within a subvolume of the total system, comprising approximately targetN cells,
     // are arranged as clusters, and 1 otherwise.
@@ -647,11 +579,9 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
     int sameTypeClose=0; // number of cells of the same type, and that are close (i.e. within a distance of spatialRange)
     int diffTypeClose=0; // number of cells of opposite types, and that are close (i.e. within a distance of spatialRange)
 
-    float** posSubvol = (float**)_mm_malloc(sizeof(float*)*3, 64);    // array of all 3 dimensional cell positions in the subcube
+    float* posSubvol = (float*)_mm_malloc(sizeof(float)*n*3, 64);    // array of all 3 dimensional cell positions in the subcube
 	int i;
-	for (i = 0; i < 3; ++i) {
-		posSubvol[i] = (float*)_mm_malloc(sizeof(float)*n, 64);
-	}
+
 	__attribute__((aligned(64))) int typesSubvol[n];
 
     float subVolMax = pow(float(targetN)/float(n),1.0/3.0)/2;
@@ -665,19 +595,19 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 	{
 		int subvolnum;
 		int i1, i2;
-		#pragma omp for
+		#pragma omp for 
 		for (i1 = 0; i1 < n; ++i1) {
-			if ((fabs(posAll[0][i1] - 0.5) < subVolMax) && (fabs(posAll[1][i1] - 0.5) < subVolMax) && (fabs(posAll[2][i1] - 0.5) < subVolMax)) {
+			if ((fabs(posAll[i1] - 0.5) < subVolMax) && (fabs(posAll[finalnum+i1] - 0.5) < subVolMax) && (fabs(posAll[finalnum2+i1] - 0.5) < subVolMax)) {
 				#pragma omp critical
 				{
 					subvolnum = nrCellsSubVol++;
 				}
 				#pragma vector aligned
 				#pragma vector nontemporal
-				//posSubvol[0][subvolnum] = posAll[0][i1];
-				//posSubvol[1][subvolnum] = posAll[1][i1];
-				//posSubvol[2][subvolnum] = posAll[2][i1];
-				posSubvol[0:2][subvolnum] = posAll[0:2][i1]; //I'm sorry for thrashing yew ._.
+				#pragma vector ivdef
+				posSubvol[subvolnum:finalnum2: finalnum] = posAll[i1:finalnum2:finalnum]; //I'm sorry for thrashing yew ._.
+				#pragma vector aligned
+				#pragma vector nontemporal
 				typesSubvol[subvolnum] = typesAll[i1];
 			}
 		}
@@ -718,8 +648,7 @@ static bool getCriterion(float** posAll, int* typesAll, int n, float spatialRang
 				//ipe = i2 + e; 
 				#pragma vector aligned
 				#pragma vector nontemporal
-				currDist[0:e] = getL2DistanceSq(posSubvol[0][i1] - posSubvol[0][i2:e], posSubvol[1][i1] - posSubvol[1][i2:e], posSubvol[2][i1] - posSubvol[2][i2:e]);
-				//getL2Distance(posSubvol[0][i1], posSubvol[1][i1], posSubvol[2][i1], posSubvol[0][i2], posSubvol[1][i2], posSubvol[2][i2]);
+				currDist[0:e] = getL2DistanceSq(posSubvol[i1] - posSubvol[i2:e], posSubvol[finalnum+i1] - posSubvol[finalnum+i2:e], posSubvol[finalnum2+i1] - posSubvol[finalnum2+i2:e]);
 				for (it = 0; it < e; ++it) {
 					if (currDist[it] < spatialRangeSq) {
 						#pragma omp critical
@@ -865,32 +794,37 @@ int main(int argc, char *argv[]) {
     print_params(&params, stderr);
 
     const float    speed            = params.speed;
-    const int64_t  T                = params.T;
-    const int64_t  L                = params.L;
+    const int  T                = params.T;
+    const int  L                = params.L;
     const float    D                = params.D;
     const float    mu               = params.mu;
     const unsigned divThreshold     = params.divThreshold;
-    const int64_t  finalNumberCells = params.finalNumberCells;
+    const int  finalNumberCells = params.finalNumberCells;
     const float    spatialRange     = params.spatialRange;
     const float    pathThreshold    = params.pathThreshold;
 
+	finalnum = finalNumberCells;
+	finalnum2 = 2 * finalnum;
+
     int i,c,d,e;
-    int i1, i2, i3, i4;
+    int i1, i2, i3;
+
+	lv1 = L;
+	lv2 = L*L;
+	lv3 = L*L*L;
 
     float energy;   // value that quantifies the quality of the cell clustering output. The smaller this value, the better the clustering.
+    float* posAll= (float*)_mm_malloc(sizeof(float)*3*finalNumberCells, 64);   // array of all 3 dimensional cell positions
+	float* pathTraveled = (float*)_mm_malloc(sizeof(float)*finalNumberCells, 64);
+	int* numberDivisions = (int*)_mm_malloc(sizeof(float)*finalNumberCells, 64);
+	int* typesAll = (int*)_mm_malloc(sizeof(float)*finalNumberCells, 64);
+	float * Conc = (float*)_mm_malloc(sizeof(float) * 2 * L*L*L, 64); //christ, that barely fits in a signed int (waz dis intentional?)
+	float * currMov = (float*)_mm_malloc(sizeof(float) * finalNumberCells * 3, 64); // array of all cell movements in the last time step
+	float zeroFloat = 0.0;
 
-    float** posAll= (float**)_mm_malloc(sizeof(float*)*3, 64);   // array of all 3 dimensional cell positions
-	//float **** concref = new float ***[2]; //0 for center, 1 for north, 2 for south, 3 for east, 4 for west
 	//concref[0] = new float **[7];
 	//concref[1] = new float **[7];
     //posAll = new float*[3]; //SWITCH THESE DIMENSIONS LATER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    float** currMov=0;  // array of all 3 dimensional cell movements at the last time point
-    currMov = (float**)_mm_malloc(sizeof(float*) * 3, 64); // array of all cell movements in the last time step
-    float zeroFloat = 0.0;
-
-	__attribute__((aligned(64))) float pathTraveled[finalNumberCells];   // array keeping track of length of path traveled until cell divides
-	__attribute__((aligned(64))) int numberDivisions[finalNumberCells];  //array keeping track of number of division a cell has undergone
-	__attribute__((aligned(64))) int typesAll[finalNumberCells];   // array specifying cell type (+1 or -1)
 
     numberDivisions[0]=0;   // the first cell has initially undergone 0 duplications (= divisions)
     typesAll[0]=1;  // the first cell is of type 1
@@ -904,44 +838,39 @@ int main(int argc, char *argv[]) {
 			//pathTraveled[0:e] = zeroFloat;
 		//}
 	//}
-	pathTraveled[0:finalNumberCells] = zeroFloat;
 
     // Initialization of the various arrays
-	for (i1 = 0; i1 < 3; ++i1) {
-		currMov[i1] = (float*)_mm_malloc(sizeof(float*)*finalNumberCells, 64);
-		posAll[i1] = (float*)_mm_malloc(sizeof(float*)*finalNumberCells, 64);
-		currMov[i1][0:finalNumberCells] = zeroFloat;
-		posAll[i1][0:finalNumberCells] = 0.5;
-    }
 
-    // create 3D concentration matrix
-    float**** Conc; //we also need to rearrange the dimensions on this
-	//float**** tempConc;
-    Conc = (float****)_mm_malloc(sizeof(float***)*2, 64); //HOW DID YOU MAKE A MISTAKE LIKE THAT!?!??!??!?!?!?!
-	//tempConc = new float***[2];
-	//int i22, i33;
-	for (i1 = 0; i1 < 2; ++i1) {
-		Conc[i1] = (float***)_mm_malloc(sizeof(float**)*L, 64);
-		//tempConc[i1] = new float**[L];
-		#pragma omp parallel default(shared) if (parallels && false)
-		{
-		int i22, i33;
-			#pragma omp for
-			for (i22 = 0; i22 < L; ++i22) {
-				Conc[i1][i22] = (float**)_mm_malloc(sizeof(float*)*L, 64);
-				//tempConc[i1][i22] = new float*[L];
-				for (i33 = 0; i33 < L; ++i33) {
-					Conc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
-					//tempConc[i1][i22][i33] = (float*)_mm_malloc(sizeof(float)*L, 64);
-					//for (i4 = 0; i4 < L; i4++) {
-					//tempConc[i1][i2][i3][0:L] = zeroFloat;
-					#pragma vector aligned
-					#pragma ivdep
-					#pragma vector nontemporal
-					Conc[i1][i22][i33][0:L] = zeroFloat;
-				}
-			}
+	#pragma omp parallel default(shared)  if (parallels)
+	{
+		#pragma vector aligned
+		#pragma ivdep
+		#pragma vector nontemporal	
+		#pragma omp for simd
+		for (i1 = 0; i1 < 3 * finalNumberCells; ++i1) {
+			currMov[i1] = zeroFloat;
+			posAll[i1] = (float)0.5;
 		}
+	}
+	#pragma omp parallel default(shared)  if (parallels) 
+	{
+		#pragma vector aligned
+		#pragma ivdep
+		#pragma vector nontemporal	
+		#pragma omp for simd
+		for (int v = 0; v < finalNumberCells; ++v) {
+			pathTraveled[v] = zeroFloat; //init touch to keep it close to the place where it will be worked on
+			numberDivisions[v] = 0;   //same idea
+			typesAll[v] = 1;
+		}
+	}
+    // create 3D concentration matrix
+	#pragma vector aligned
+	#pragma ivdep
+	#pragma vector nontemporal
+	#pragma omp parallel for simd
+	for (i1 = 0; i1 < 2*lv3; ++i1) {
+		
 	}
 
 	int halfsies = (int)(0.5*(float)L);
@@ -968,6 +897,7 @@ int main(int argc, char *argv[]) {
 
 	// Phase 1: Cells move randomly and divide until final number of cells is reached
 	//fprintf(stderr,"not broken");
+	int finalNumberCells2 = 2 * finalNumberCells;
 		while (n<finalNumberCells) {
 			//fprintf(stderr,"%d\n", (int)n);
 			//fprintf(stderr, "not broken1\n");
@@ -992,18 +922,20 @@ int main(int argc, char *argv[]) {
 					if (n - c < 16) { e = (int)n - c; }
 					// boundary conditions
 					for (d=0; d<3; d++) {
-						if (posAll[d][c:e]<0) { posAll[d][c:e] = 0; }
-						if (posAll[d][c:e]>1) { posAll[d][c:e] = 1; }
+						if (posAll[d*finalnum+c:e]<0) { posAll[d*finalnum+c:e] = 0; }
+						if (posAll[d*finalnum+c:e]>1) { posAll[d*finalnum+c:e] = 1; }
 					}
 				}
 			}
 			#else
+			int tmp;
 			for (d = 0; d<3; d++) {
+				tmp = finalnum*d;
 				#pragma vector aligned
 				#pragma ivdep
-				#pragma vector nontemporal
-				if (posAll[d][0:n]<0) { posAll[d][0:n] = 0; }
-				if (posAll[d][0:n]>1) { posAll[d][0:n] = 1; }
+				#pragma vector nontemporal}
+				if (posAll[tmp:n]<0) { posAll[tmp:n] = 0; }
+				if (posAll[tmp:n]>0.9999) { posAll[tmp:n] = 0.9999; } //<3
 			}
 			#endif
 		}
@@ -1068,21 +1000,26 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "decay\n");
 			runDecayStep(Conc, L, mu);
 			fprintf(stderr, "cluster\n");
-			runDiffusionClusterStep(Conc, currMov, posAll, typesAll, n, L, speed);
+			runDiffusionClusterStep(Conc,currMov, posAll, typesAll, n, L, speed);
+
 			//parallel_for(blocked_range(0, n), [&](const blocked_range<size_t>& x) {
-			#pragma omp parallel default(shared) if (parallels && false)
+			#pragma omp parallel default(shared)  if (parallels && false)
 			{
-				int e;
-				#pragma omp for
-				for (c = 0; c < n; c += 16) {
-					e = min(16, (int)n - c); 
-					posAll[0][c:e] = posAll[0][c:e] + currMov[0][c:e];
-					posAll[1][c:e] = posAll[1][c:e] + currMov[1][c:e];
-					posAll[2][c:e] = posAll[2][c:e] + currMov[2][c:e];
-					// boundary conditions: cells can not move out of the cube [0,1]^3
-					for (d = 0; d < 3; d++) {
-						if (posAll[d][c:e] < 0) { posAll[d][c:e] = 0; }
-						if (posAll[d][c:e] > 1) { posAll[d][c:e] = 1; }
+				int d,alignv;
+				for (d = 0; d < 3; ++d) {
+					alignv = finalNumberCells*d;
+					#pragma vector aligned
+					#pragma vector nontemporal
+					#pragma ivdep
+					#pragma omp for simd
+					for (int c = 0; c < n; ++c) {
+						posAll[alignv + c] = posAll[alignv + c] + currMov[alignv + c];
+						if (posAll[alignv+c] < 0) {
+							posAll[alignv+c] = 0;
+						}
+						if (posAll[alignv+c] > 0.9999) {
+							posAll[alignv+c] = 1;
+						}
 					}
 				}
 			}

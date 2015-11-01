@@ -1,0 +1,31 @@
+Intel(R) Advisor can now assist with vectorization and show optimization
+  report messages with your source code.
+See "https://software.intel.com/en-us/intel-advisor-xe" for details.
+
+
+Begin optimization report for: read_kv(char **, int, int *)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at util.cpp(145,5)
+LOOP END
+===========================================================================
+
+Begin optimization report for: cdc_set_kv..0(cdc_params *, char *, unsigned int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at util.cpp(180,5) inlined into util.cpp(199,5)
+LOOP END
+===========================================================================
+
+Begin optimization report for: cdc_set_kv..1(cdc_params *, char *, unsigned int)
+
+    Report from: Vector optimizations [vec]
+
+
+LOOP BEGIN at util.cpp(180,5) inlined into util.cpp(199,5)
+LOOP END
+===========================================================================

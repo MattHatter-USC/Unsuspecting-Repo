@@ -360,13 +360,11 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 						//currentNorm = getNorm(duplicatedCellOffset);
 						fprintf(stderr, "haaai");
 						currentrNorm2 = 1.0 / getNorm(duplicatedCellOffset);
-						#pragma ivdep
-						#pragma vector nontemporal
-						//#pragma vector aligned
+						//#pragma ivdep
+						//#pragma vector nontemporal
 						posAll[newcellnum:finalnum2:finalnum] = posAll[i:finalnum2:finalnum];
-						#pragma ivdep
-						#pragma vector nontemporal
-						//#pragma vector aligned
+						//#pragma ivdep
+						//#pragma vector nontemporal
 						posAll[newcellnum:finalnum2:finalnum] *= 0.05*duplicatedCellOffset[0:3] * currentrNorm2;
 					}
 

@@ -393,7 +393,7 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 		int L2 = L*L;
 		int L3 = L*L*L;
 		{
-			__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i, a_in, b_in, c_in, d_in, e_in, f_in, ;
+			__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i, a_in, b_in, c_in, d_in, e_in, f_in ;
 			__m512 type, t1, t2, t3, Lv, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
 			__mmask16 comparemask;
 			#pragma omp for
@@ -423,10 +423,10 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				a = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[iter]), Lv), _MM_FROUND_TO_NEG_INF); //goood stuff
 				b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum + iter]), Lv), _MM_FROUND_TO_NEG_INF);
 				c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2 + iter]), Lv), _MM_FROUND_TO_NEG_INF);
-				type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), speed);
-				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(a, 1), c0), c0);
-				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(b, 1), c0), c0);
-				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(c, 1), c0), c0);//twelve
+				type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), _mm512_set1_ps(speed));
+				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(a, c0), 1), c0);
+				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(b, c0), 1), c0);
+				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(c, c0), 1), c0);//twelve
 				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(a, c0), b0, 1), c0);
 				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(b, c0), b0, 1), c0);//john cena
 				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(c, c0), b0, 1), c0);

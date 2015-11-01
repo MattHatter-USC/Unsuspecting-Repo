@@ -209,32 +209,59 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 				for (subInd = 0; subInd < 2; subInd++) {
 					#pragma vector aligned
 					#pragma vector nontemporal
+					#pragma ivdep
 					temp[0:L] = 0.0;
 					if ((i1 + 1) < L) {
+						#pragma vector aligned
+						#pragma vector nontemporal
+						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+(i1+1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i1 - 1) >= 0) {
+						#pragma vector aligned
+						#pragma vector nontemporal
+						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+(i1 - 1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i2 + 1) < L) {
+						#pragma vector aligned
+						#pragma vector nontemporal
+						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 + 1)*lv1:L];
 						++added;
 					}
 					if ((i2 - 1) >= 0) {
+						#pragma vector aligned
+						#pragma vector nontemporal
+						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 - 1)*lv1:L];
 						++added;
 					}
+					#pragma vector aligned//just put them everywhere psh
+					#pragma vector nontemporal
+					#pragma ivdep
+					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
 					#pragma vector aligned
 					#pragma vector nontemporal
-					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
+					#pragma ivdep
 					temp[1:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1:LM];
-					temp[1:LMM] -= added*Conc[subInd*lv3+i1*lv2+i2*lv1+1:LMM];
+					#pragma vector aligned
+					#pragma vector nontemporal
+					#pragma ivdep
+					temp[1:LMM] -= added*Conc[subInd*lv3 + i1*lv2 + i2*lv1 + 1:LMM];
 					temp[0] -= (added-1)*Conc[subInd*lv3+i1*lv2+i2*lv1];
 					temp[LM] -= (added - 1)*Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
+					#pragma vector aligned
+					#pragma vector nontemporal
+					#pragma ivdep
 					temp[0:L] *= con;
+					#pragma vector aligned
+					#pragma vector nontemporal
+					#pragma ivdep
 					Conc[subInd*lv3+i1*lv2+i2*lv1:L] += temp[0:L]; //sexy
+
 					//lends itself quite well to vectorization
 				}
 			}
@@ -270,7 +297,7 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 	int currentNumberCells = n;
 	#pragma omp parallel default(shared) if (parallels)
 	{
-		int c, i, e;
+		int i, e;
 		__attribute__((aligned(64))) float currenttrNorm[16];
 		int newcellnum;
 		float currentrNorm2;
@@ -278,7 +305,7 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 		__attribute__((aligned(64))) float  duplicatedCellOffset[3]; 
 		int endv = (n / 16) * 16;
 		#pragma omp for
-		for (c = 0; c < n; c += 16) {
+		for (int c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
 			// random cell movement
 			for (i = 0; i < e; ++i) {
@@ -289,18 +316,23 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 			//currentNorm = getNorm(currentCellMovement);
 			#pragma vector aligned
 			#pragma vector nontemporal
+			#pragma ivdep
 			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0:e]* currentCellMovement[0:e] + currentCellMovement[16:e]*currentCellMovement[16:e] + currentCellMovement[32:e]*currentCellMovement[32:e]);
 			#pragma vector aligned
 			#pragma vector nontemporal
+			#pragma ivdep
 			posAll[c:e] += 0.1*currentCellMovement[0:e] * currentrNorm[0:e];
 			#pragma vector aligned
 			#pragma vector nontemporal
+			#pragma ivdep
 			posAll[finalnum+c:e] += 0.1*currentCellMovement[16:e] * currentrNorm[16:e];
 			#pragma vector aligned
 			#pragma vector nontemporal
+			#pragma ivdep
 			posAll[finalnum2+c:e] += 0.1*currentCellMovement[32:e] * currentrNorm[32:e];
 			#pragma vector aligned
 			#pragma vector nontemporal
+			#pragma ivdep
 			pathTraveled[c:e] += 0.1;
 			for (i = c; i < e; ++i) { //we'll figure this out later
 				// cell duplication if conditions fulfilled
@@ -349,88 +381,125 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 	{
 		//imma pragma yo momma
 		//TODO: dsadsa
-		int c;
+		float sideLength = 1 / (float)L; // length of a side of a diffusion voxel
+		float rsideLength = (float)L;
 		float gradSub1[3];
 		float gradSub2[3];
 
 		float normGrad1, normGrad2;
 		int i1, i2, i3, xUp, xDown, yUp, yDown, zUp, zDown;
+
 		//for (int c = 0; c < n; ++c)
-#pragma ivdep
-#pragma vector nontemporal
-#pragma vector aligned
 		int endv = (n / 16) * 16;
 		int L2 = L*L;
 		int L3 = L*L*L;
-		int iter;
-		__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i;
-		__m512 type, t1, t2, t3, Lv, a_in, b_in, c_in, d_in, e_in, f_in, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
-		__mmask16 comparemask;
-		for (iter; iter < endv; iter += 16) {
-			//spoiler alert, I am jesus
-			//important commands:
-			//_mm512_stream_ps(void* mem_addr, __m512 a) (for saving shit)
-			//_mm512_fmadd_ps(__m512 a, __m512 b, __m512 c) mult a and b, add c
-			//_mm512_mul_ps(__m512 a, __m512db) mult a and b
-			//_mm512_add_ps(__m512 a,__m512 b) add a and b
-			//_mm512_div_round_ps(__m512 a, __m512 b, _MM_FROUND_TO_NEAREST_INT);
+		{
+			__m512i a, b, c, a0, b0, c0, L1_v, L2_v, L3_v, d, e, f, g, h, i;
+			__m512 type, t1, t2, t3, Lv, a_in, b_in, c_in, d_in, e_in, f_in, GS10, GS11, GS12, GS20, GS21, GS22, preval1, preval2, norm1, norm2;
+			__mmask16 comparemask;
+			#pragma omp for
+			for (int iter = 0; iter < endv; iter += 16) {
+				//spoiler alert, I am jesus
+				//important commands:
+				//_mm512_stream_ps(void* mem_addr, __m512 a) (for saving shit)
+				//_mm512_fmadd_ps(__m512 a, __m512 b, __m512 c) mult a and b, add c
+				//_mm512_mul_ps(__m512 a, __m512db) mult a and b
+				//_mm512_add_ps(__m512 a,__m512 b) add a and b
+				//_mm512_div_round_ps(__m512 a, __m512 b, _MM_FROUND_TO_NEAREST_INT);
 
 
-			//__nmask16 comparemask;
-			a0 = _mm512_setzero_epi32();
-			b0 = _mm512_set1_epi32(L - 1);
-			c0 = _mm512_set1_epi32(1);
-			Lv = _mm512_set1_ps((float)L);
-			//if ((c + 31) < endv) { //prefetchhh
-			//	_mm_prefetch((char*), _MM_HINT_T0
-			//}
-			//do le prefetching hereish?
-			L1_v = _mm512_set1_epi32(L); //no relation to the cache ;)
-			L2_v = _mm512_set1_epi32(L2);
-			L3_v = _mm512_set1_epi32(L3);
-			//loop begin //perhaps declare all vars below outside loop
-			a = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[iter]), Lv), _MM_FROUND_TO_NEG_INF); //goood stuff
-			b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum+iter]), Lv), _MM_FROUND_TO_NEG_INF);
-			c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2+iter]), Lv), _MM_FROUND_TO_NEG_INF);
-			type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), speed);
-			d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(a, 1), 1), c0);
-			e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(b, 1), 1), c0);
-			f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(c, 1), 1), c0);//twelve
-			g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(a, 1), b0, 1), c0);
-			h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(b, 1), b0, 1), c0);//john cena
-			i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(c, 1), b0, 1), c0);
-			a_in = _mm512_fmadd_ps(_mm512_sub_ps(a, d), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //down
-			b_in = _mm512_fmadd_ps(_mm512_add_ps(a, g), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //up
-			c_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_sub_ps(b, e), c)); //down
-			d_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_add_ps(b, h), c)); //up
-			e_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_sub_ps(c, f))); //down
-			f_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_add_ps(c, i))); //up
-			_mm512_prefetch_i32gather_ps((a_in + L3_v), Conc, 1, _MM_HINT_NTA);  //WTF DOES THE SCALE DOOO
-			_mm512_prefetch_i32gather_ps((b_in + L3_v), Conc, 1, _MM_HINT_NTA);
-			_mm512_prefetch_i32gather_ps((c_in + L3_v), Conc, 1, _MM_HINT_NTA);
-			_mm512_prefetch_i32gather_ps((d_in + L3_v), Conc, 1, _MM_HINT_NTA);
-			_mm512_prefetch_i32gather_ps((e_in + L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
-			_mm512_prefetch_i32gather_ps((f_in + L3_v), Conc, 1, _MM_HINT_NTA);
-			t1 = _mm512_div_ps(Lv, _mm512_add_ps(d, g));
-			t2 = _mm512_div_ps(Lv, _mm512_add_ps(e, h));
-			t3 = _mm512_div_ps(Lv, _mm512_add_ps(f, i));
-			GS10 = _mm512_mul_ps((_mm512_i32gather_ps(b_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(a_in, Conc, 4, _MM_HINT_NTA)), t1);
-			GS11 = _mm512_mul_ps((_mm512_i32gather_ps(d_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(c_in, Conc, 4, _MM_HINT_NTA)), t2);
-			GS12 = _mm512_mul_ps((_mm512_i32gather_ps(f_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(e_in, Conc, 4, _MM_HINT_NTA)), t3);
-			preval1 = _mm512_fmadd_ps(GS10, GS10, _mm512_fmadd_ps(GS11, GS11, _mm512_mul_ps(GS12, GS12))); //beautiful
-			norm1 = _mm512_rsqrt28_ps(preval2);
-			GS20 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 4, _MM_HINT_NTA)), t1);
-			GS21 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 4, _MM_HINT_NTA)), t2);
-			GS22 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(f_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 4, _MM_HINT_NTA)), t3);
-			preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
-			norm2 = _mm512_rsqrt28_ps(preval2);
-			comparemask = _mm512_kand(_mm512_cmp_epi32_masks(a0, preval1), _mm512_cmp_epi32_masks(a0, preval2));
-			t1 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
-			t2 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
-			t3 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
-			_mm512_stream_ps(&movVec[iter], t1); //saves
-			_mm512_stream_ps(&movVec[finalnum+iter], t2);
-			_mm512_stream_ps(&movVec[finalnum2+iter], t3);
+				//__nmask16 comparemask;
+				a0 = _mm512_setzero_epi32();
+				b0 = _mm512_set1_epi32(L - 1);
+				c0 = _mm512_set1_epi32(1);
+				Lv = _mm512_set1_ps((float)L);
+				//if ((c + 31) < endv) { //prefetchhh
+				//	_mm_prefetch((char*), _MM_HINT_T0
+				//}
+				//do le prefetching hereish?
+				L1_v = _mm512_set1_epi32(L); //no relation to the cache ;)
+				L2_v = _mm512_set1_epi32(L2);
+				L3_v = _mm512_set1_epi32(L3);
+				//loop begin //perhaps declare all vars below outside loop
+				a = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[iter]), Lv), _MM_FROUND_TO_NEG_INF); //goood stuff
+				b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum + iter]), Lv), _MM_FROUND_TO_NEG_INF);
+				c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2 + iter]), Lv), _MM_FROUND_TO_NEG_INF);
+				type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), speed);
+				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(a, 1), 1), c0);
+				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(b, 1), 1), c0);
+				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_ps(c, 1), 1), c0);//twelve
+				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(a, 1), b0, 1), c0);
+				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(b, 1), b0, 1), c0);//john cena
+				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_ps(c, 1), b0, 1), c0);
+				a_in = _mm512_fmadd_ps(_mm512_sub_ps(a, d), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //down
+				b_in = _mm512_fmadd_ps(_mm512_add_ps(a, g), L2_v, _mm512_fmadd_ps(L1_v, b, c)); //up
+				c_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_sub_ps(b, e), c)); //down
+				d_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, _mm512_add_ps(b, h), c)); //up
+				e_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_sub_ps(c, f))); //down
+				f_in = _mm512_fmadd_ps(a, L2_v, _mm512_fmadd_ps(L1_v, b, _mm512_add_ps(c, i))); //up
+				_mm512_prefetch_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 1, _MM_HINT_NTA);  //WTF DOES THE SCALE DOOO
+				_mm512_prefetch_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				_mm512_prefetch_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
+				_mm512_prefetch_i32gather_ps_mm512_add_ps((f_in, L3_v), Conc, 1, _MM_HINT_NTA);
+				t1 = _mm512_div_ps(Lv, _mm512_add_ps(d, g));
+				t2 = _mm512_div_ps(Lv, _mm512_add_ps(e, h));
+				t3 = _mm512_div_ps(Lv, _mm512_add_ps(f, i));
+				GS10 = _mm512_mul_ps((_mm512_i32gather_ps(b_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(a_in, Conc, 4, _MM_HINT_NTA)), t1);
+				GS11 = _mm512_mul_ps((_mm512_i32gather_ps(d_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(c_in, Conc, 4, _MM_HINT_NTA)), t2);
+				GS12 = _mm512_mul_ps((_mm512_i32gather_ps(f_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(e_in, Conc, 4, _MM_HINT_NTA)), t3);
+				preval1 = _mm512_fmadd_ps(GS10, GS10, _mm512_fmadd_ps(GS11, GS11, _mm512_mul_ps(GS12, GS12))); //beautiful
+				norm1 = _mm512_rsqrt28_ps(preval2);
+				GS20 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 4, _MM_HINT_NTA)), t1);
+				GS21 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 4, _MM_HINT_NTA)), t2);
+				GS22 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(f_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 4, _MM_HINT_NTA)), t3);
+				preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
+				norm2 = _mm512_rsqrt28_ps(preval2);
+				comparemask = _mm512_kand(_mm512_cmp_epi32_masks(a0, preval1), _mm512_cmp_epi32_masks(a0, preval2));
+				t1 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
+				t2 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
+				t3 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
+				_mm512_stream_ps(&movVec[iter], t1); //saves
+				_mm512_stream_ps(&movVec[finalnum + iter], t2);
+				_mm512_stream_ps(&movVec[finalnum2 + iter], t3);
+			}
+		} //so the context of "c" does not overlap
+		#pragma omp for
+		for (int c = endv; c < n; ++c) {
+			i1 = min((int)floor(posAll[c] * rsideLength), (L - 1));
+			i2 = min((int)floor(posAll[finalnum+c] * rsideLength), (L - 1));
+			i3 = min((int)floor(posAll[finalnum2+c] * rsideLength), (L - 1));
+
+			xUp = min((i1 + 1), L - 1);
+			xDown = max((i1 - 1), 0);
+			yUp = min((i2 + 1), L - 1);
+			yDown = max((i2 - 1), 0);
+			zUp = min((i3 + 1), L - 1);
+			zDown = max((i3 - 1), 0);
+
+			gradSub1[0] = (Conc[lv2*xUp+lv1*i2+i3] - Conc[lv2*xDown+lv1*i2+i3]) / (sideLength*(xUp - xDown));
+			gradSub1[1] = (Conc[lv2*i1+lv1*yUp+i3] - Conc[lv2*i1+lv1*yDown+i3]) / (sideLength*(yUp - yDown));
+			gradSub1[2] = (Conc[lv2*i1+lv1*i2+zUp] - Conc[lv2&i1+lv1*i2+zDown]) / (sideLength*(zUp - zDown));
+
+			gradSub2[0] = (Conc[lv3+xUp*lv2+i2*lv1+i3] - Conc[lv3+lv2*xDown+lv1*i2+i3]) / (sideLength*(xUp - xDown));
+			gradSub2[1] = (Conc[lv3+i1*lv2+yUp*lv1+i3] - Conc[lv3+lv2*i1+lv1*yDown+i3]) / (sideLength*(yUp - yDown));
+			gradSub2[2] = (Conc[lv3+i1*lv2+i2*lv1+zUp] - Conc[lv3+lv2*i1+lv1*i2+zDown]) / (sideLength*(zUp - zDown));
+
+			normGrad1 = getNorm(gradSub1);
+			normGrad2 = getNorm(gradSub2);
+
+			if ((normGrad1>0) && (normGrad2>0)) {
+				movVec[c] = typesAll[c] * (gradSub1[0] / normGrad1 - gradSub2[0] / normGrad2)*speed;
+				movVec[finalnum+c] = typesAll[c] * (gradSub1[1] / normGrad1 - gradSub2[1] / normGrad2)*speed;
+				movVec[finalnum2+c] = typesAll[c] * (gradSub1[2] / normGrad1 - gradSub2[2] / normGrad2)*speed;
+			}
+
+			else {
+				movVec[c] = 0;
+				movVec[finalnum+c] = 0;
+				movVec[finalnum2+c] = 0;
+			}
 		}
 	}
 

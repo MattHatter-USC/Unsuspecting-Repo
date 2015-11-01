@@ -450,9 +450,9 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				GS12 = _mm512_mul_ps((_mm512_i32gather_ps(f_in, Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(e_in, Conc, 4, _MM_HINT_NTA)), t3);
 				preval1 = _mm512_fmadd_ps(GS10, GS10, _mm512_fmadd_ps(GS11, GS11, _mm512_mul_ps(GS12, GS12))); //beautiful
 				norm1 = _mm512_rsqrt28_ps(preval2);
-				GS20 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 4, _MM_HINT_NTA)), t1);
-				GS21 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 4, _MM_HINT_NTA)), t2);
-				GS22 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(f_in, L3_v), Conc, 4, _MM_HINT_NTA) - _mm512_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 4, _MM_HINT_NTA)), t3);
+				GS20 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(b_in, L3_v), Conc, 4) - _mm512_i32gather_ps(_mm512_add_ps(a_in, L3_v), Conc, 4)), t1);
+				GS21 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(d_in, L3_v), Conc, 4) - _mm512_i32gather_ps(_mm512_add_ps(c_in, L3_v), Conc, 4)), t2);
+				GS22 = _mm512_mul_ps((_mm512_i32gather_ps(_mm512_add_ps(f_in, L3_v), Conc, 4) - _mm512_i32gather_ps(_mm512_add_ps(e_in, L3_v), Conc, 4)), t3);
 				preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
 				norm2 = _mm512_rsqrt28_ps(preval2);
 				comparemask = _mm512_kand(_mm512_cmp_epi32_masks(a0, preval1), _mm512_cmp_epi32_masks(a0, preval2));

@@ -442,12 +442,12 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(d_in, L3_v), Conc, 1, _MM_HINT_NTA);
 				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(e_in, L3_v), Conc, 1, _MM_HINT_NTA); //faiiiirly certain these last 2 can be pulled using just... like normal vector operations.
 				_mm512_prefetch_i32gather_ps(_mm512_add_epi32(f_in, L3_v), Conc, 1, _MM_HINT_NTA);
-				t1 = _mm512_div_ps(Lv, _mm512_add_ps(d, g));
-				t2 = _mm512_div_ps(Lv, _mm512_add_ps(e, h));
-				t3 = _mm512_div_ps(Lv, _mm512_add_ps(f, i));
-				GS10 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(b_in, Conc, 4, _MM_HINT_NTA), _mm512_i32gather_ps(a_in, Conc, 4, _MM_HINT_NTA)), t1);
-				GS11 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(d_in, Conc, 4, _MM_HINT_NTA), _mm512_i32gather_ps(c_in, Conc, 4, _MM_HINT_NTA)), t2);
-				GS12 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(f_in, Conc, 4, _MM_HINT_NTA), _mm512_i32gather_ps(e_in, Conc, 4, _MM_HINT_NTA)), t3);
+				t1 = _mm512_div_ps(Lv, _mm512_cvtepi32_ps(_mm512_add_epi32(d, g)));
+				t2 = _mm512_div_ps(Lv, _mm512_cvtepi32_ps(_mm512_add_epi32(e, h)));
+				t3 = _mm512_div_ps(Lv, _mm512_cvtepi32_ps(_mm512_add_epi32(f, i)));
+				GS10 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(b_in, Conc, 4), _mm512_i32gather_ps(a_in, Conc, 4)), t1);
+				GS11 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(d_in, Conc, 4), _mm512_i32gather_ps(c_in, Conc, 4)), t2);
+				GS12 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(f_in, Conc, 4), _mm512_i32gather_ps(e_in, Conc, 4)), t3);
 				preval1 = _mm512_fmadd_ps(GS10, GS10, _mm512_fmadd_ps(GS11, GS11, _mm512_mul_ps(GS12, GS12))); //beautiful
 				norm1 = _mm512_rsqrt28_ps(preval2);
 				GS20 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(_mm512_add_epi32(b_in, L3_v), Conc, 4), _mm512_i32gather_ps(_mm512_add_epi32(a_in, L3_v), Conc, 4)), t1);

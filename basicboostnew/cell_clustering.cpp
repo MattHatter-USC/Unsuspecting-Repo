@@ -206,13 +206,11 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 			for (i2 = 0; i2 < L; ++i2) {
 				int added = 2;
 				for (subInd = 0; subInd < 2; subInd++) {
-					fprintf(stderr, "%d, %d\n",i1,i2);
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:L] = 0.0;
 					if ((i1 + 1) < L) {
-						fprintf(stderr, "b\n");
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
@@ -221,16 +219,12 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 					}
 
 					if ((i1 - 1) >= 0) {
-						fprintf(stderr, "c\n");
-
 						#pragma vector aligned nontemporal
 						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+(i1 - 1)*lv2+i2*lv1:L];
 						++added;
 					}
 					if ((i2 + 1) < L) {
-						fprintf(stderr, "d\n");
-
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
@@ -238,38 +232,30 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 						++added;
 					}
 					if ((i2 - 1) >= 0) {
-						fprintf(stderr, "e\n");
-
 						#pragma vector aligned
 						#pragma vector nontemporal
 						#pragma ivdep
 						temp[0:L] += Conc[subInd*lv3+i1*lv2+(i2 - 1)*lv1:L];
 						++added;
 					}
-					fprintf(stderr, "e2\n");
-
 					//#pragma vector aligned//just put them everywhere psh
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+1:LM];
-					fprintf(stderr, "f\n");
 					//#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[1:LM] += Conc[subInd*lv3+i1*lv2+i2*lv1:LM];
-					fprintf(stderr, "g\n");
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:L] -= added*Conc[subInd*lv3 + i1*lv2 + i2*lv1:L];
-					fprintf(stderr, "h\n");
 					temp[0] += Conc[subInd*lv3+i1*lv2+i2*lv1];
 					temp[LM] += Conc[subInd*lv3+i1*lv2+i2*lv1+LM];
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
 					temp[0:L] *= con;
-					fprintf(stderr, "i\n");
 					#pragma vector aligned
 					#pragma vector nontemporal
 					#pragma ivdep
@@ -315,7 +301,8 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 		float currentrNorm2;
 		__attribute__((aligned(64))) float currentCellMovement[3*16];
 		__attribute__((aligned(64))) float  duplicatedCellOffset[3]; 
-		int endv = (n / 16) * 16;
+		//eint endv = (n / 16) * 16;
+		fprintf(stderr,"a");
 		#pragma omp for
 		for (int c = 0; c < n; c += 16) {
 			e = min(16, (int)n - c);	 //size of stream
@@ -325,27 +312,34 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 				currentCellMovement[16+i] =  RandomFloatPos() - 0.5;
 				currentCellMovement[32 + i] = RandomFloatPos() - 0.5;
 			}
+			
 			//currentNorm = getNorm(currentCellMovement);
+			fprintf(stderr, "b");
 			#pragma vector aligned
 			#pragma vector nontemporal
 			#pragma ivdep
 			currentrNorm[0:e] = 1.0 / sqrtf(currentCellMovement[0:e]* currentCellMovement[0:e] + currentCellMovement[16:e]*currentCellMovement[16:e] + currentCellMovement[32:e]*currentCellMovement[32:e]);
+			fprintf(stderr, "c");
 			#pragma vector aligned
 			#pragma vector nontemporal
 			#pragma ivdep
 			posAll[c:e] += 0.1*currentCellMovement[0:e] * currentrNorm[0:e];
+			fprintf(stderr, "d");
 			#pragma vector aligned
 			#pragma vector nontemporal
 			#pragma ivdep
 			posAll[finalnum+c:e] += 0.1*currentCellMovement[16:e] * currentrNorm[16:e];
+			fprintf(stderr, "e");
 			#pragma vector aligned
 			#pragma vector nontemporal
 			#pragma ivdep
 			posAll[finalnum2+c:e] += 0.1*currentCellMovement[32:e] * currentrNorm[32:e];
+			fprintf(stderr, "f");
 			#pragma vector aligned
 			#pragma vector nontemporal
 			#pragma ivdep
 			pathTraveled[c:e] += 0.1;
+			fprintf(stderr, "g");
 			for (i = c; i < e; ++i) { //we'll figure this out later
 				// cell duplication if conditions fulfilled
 				if (numberDivisions[i] < divThreshold) {
@@ -364,14 +358,15 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 						duplicatedCellOffset[1] = RandomFloatPos() - 0.5;
 						duplicatedCellOffset[2] = RandomFloatPos() - 0.5;
 						//currentNorm = getNorm(duplicatedCellOffset);
+						fprintf(stderr, "haaai");
 						currentrNorm2 = 1.0 / getNorm(duplicatedCellOffset);
 						#pragma ivdep
 						#pragma vector nontemporal
-						#pragma vector aligned
+						//#pragma vector aligned
 						posAll[newcellnum:finalnum2:finalnum] = posAll[i:finalnum2:finalnum];
 						#pragma ivdep
 						#pragma vector nontemporal
-						#pragma vector aligned
+						//#pragma vector aligned
 						posAll[newcellnum:finalnum2:finalnum] *= 0.05*duplicatedCellOffset[0:3] * currentrNorm2;
 					}
 

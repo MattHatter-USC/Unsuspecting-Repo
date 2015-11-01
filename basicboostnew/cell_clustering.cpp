@@ -456,9 +456,9 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
 				norm2 = _mm512_div_ps(_mm512_cvtepi32_ps(c0), _mm512_sqrt_ps(preval2));
 				comparemask = _mm512_kand(_mm512_cmp_ps_mask(_mm512_setzero_ps(), preval1,1), _mm512_cmp_ps_mask(_mm512_setzero_ps(), preval2,1));
-				t1 = _mm512_mask_mul_ps(a0,comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
-				t2 = _mm512_mask_mul_ps(a0,comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
-				t3 = _mm512_mask_mul_ps(a0,comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
+				t1 = _mm512_mask_mul_ps(_mm512_cvtepi32_ps(a0),comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
+				t2 = _mm512_mask_mul_ps(_mm512_cvtepi32_ps(a0),comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
+				t3 = _mm512_mask_mul_ps(_mm512_cvtepi32_ps(a0),comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
 				_mm512_storenr_ps(&movVec[iter], t1); //saves
 				_mm512_storenr_ps(&movVec[finalnum + iter], t2);
 				_mm512_storenr_ps(&movVec[finalnum2 + iter], t3);

@@ -229,7 +229,7 @@ static void runDiffusionStep(float * Conc, int L, float D) {
 						++added;
 					}
 					if ((i2 + 1) < L) {
-						fprintf(stderr, d\n");
+						fprintf(stderr, "d\n");
 
 						#pragma vector aligned
 						#pragma vector nontemporal

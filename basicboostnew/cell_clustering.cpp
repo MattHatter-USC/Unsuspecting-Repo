@@ -455,7 +455,7 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				GS22 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(_mm512_add_epi32(f_in, L3_v), Conc, 4), _mm512_i32gather_ps(_mm512_add_epi32(e_in, L3_v), Conc, 4)), t3);
 				preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
 				norm2 = _mm512_rsqrt28_ps(preval2); 
-				comparemask = _mm512_kand(_mm512_cmp_epi32_mask(a0, preval1), _mm512_cmp_epi32_mask(a0, preval2));
+				comparemask = _mm512_kand(_mm512_cmp_ps_mask(_mm512_setzero_ps(), preval1,1), _mm512_cmp_ps_mask(_mm512_setzero_ps(), preval2,1));
 				t1 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
 				t2 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
 				t3 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
@@ -999,9 +999,8 @@ int main(int argc, char *argv[]) {
 			int tmp;
 			for (d = 0; d<3; d++) {
 				tmp = finalnum*d;
-				#pragma vector aligned
 				#pragma ivdep
-				#pragma vector nontemporal}
+				#pragma vector nontemporal aligned
 				if (posAll[tmp:n]<0) { posAll[tmp:n] = 0; }
 				if (posAll[tmp:n]>0.9999) { posAll[tmp:n] = 0.9999; } //<3
 			}

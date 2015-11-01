@@ -297,7 +297,7 @@ static int cellMovementAndDuplication(float* posAll, float* pathTraveled, int* t
 	#pragma omp parallel default(shared) if (parallels)
 	{
 		int i, e;
-		__attribute__((aligned(64))) float currenttrNorm[16];
+		__attribute__((aligned(64))) float currentrNorm[16];
 		int newcellnum;
 		float currentrNorm2;
 		__attribute__((aligned(64))) float currentCellMovement[3*16];
@@ -424,12 +424,12 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				b = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum + iter]), Lv), _MM_FROUND_TO_NEG_INF);
 				c = _mm512_cvt_roundps_epi32(_mm512_mul_ps(_mm512_load_ps(&posAll[finalnum2 + iter]), Lv), _MM_FROUND_TO_NEG_INF);
 				type = _mm512_mul_ps(_mm512_cvtepi32_ps(_mm512_load_epi32(&typesAll[iter])), _mm512_set1_ps(speed));
-				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(a, c0), 1), c0);
-				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(b, c0), 1), c0);
-				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(a0, _mm512_sub_epi32(c, c0), 1), c0);//twelve
-				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(a, c0), b0, 1), c0);
-				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(b, c0), b0, 1), c0);//john cena
-				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_masks(_mm512_add_epi32(c, c0), b0, 1), c0);
+				d = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(a0, _mm512_sub_epi32(a, c0), 1), c0);
+				e = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(a0, _mm512_sub_epi32(b, c0), 1), c0);
+				f = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(a0, _mm512_sub_epi32(c, c0), 1), c0);//twelve
+				g = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(_mm512_add_epi32(a, c0), b0, 1), c0);
+				h = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(_mm512_add_epi32(b, c0), b0, 1), c0);//john cena
+				i = _mm512_maskz_mov_epi32(_mm512_cmp_epi32_mask(_mm512_add_epi32(c, c0), b0, 1), c0);
 				a_in = _mm512_add_epi32(_mm512_mul_epi32(_mm512_sub_epi32(a, d), L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), c)); //down
 				b_in = _mm512_add_epi32(_mm512_mul_epi32(_mm512_add_epi32(a, g), L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, b), c)); //up
 				c_in = _mm512_add_epi32(_mm512_mul_epi32(a, L2_v), _mm512_add_epi32(_mm512_mul_epi32(L1_v, _mm512_sub_epi32(b, e)), c)); //down
@@ -454,14 +454,14 @@ static void runDiffusionClusterStep(float* Conc, float* movVec, float* posAll, i
 				GS21 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(_mm512_add_epi32(d_in, L3_v), Conc, 4), _mm512_i32gather_ps(_mm512_add_epi32(c_in, L3_v), Conc, 4)), t2);
 				GS22 = _mm512_mul_ps(_mm512_sub_ps(_mm512_i32gather_ps(_mm512_add_epi32(f_in, L3_v), Conc, 4), _mm512_i32gather_ps(_mm512_add_epi32(e_in, L3_v), Conc, 4)), t3);
 				preval2 = _mm512_fmadd_ps(GS20, GS20, _mm512_fmadd_ps(GS21, GS21, _mm512_mul_ps(GS22, GS22)));
-				norm2 = _mm512_rsqrt28_ps(preval2);
-				comparemask = _mm512_kand(_mm512_cmp_epi32_masks(a0, preval1), _mm512_cmp_epi32_masks(a0, preval2));
+				norm2 = _mm512_rsqrt28_ps(preval2); 
+				comparemask = _mm512_kand(_mm512_cmp_epi32_mask(a0, preval1), _mm512_cmp_epi32_mask(a0, preval2));
 				t1 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS10, norm1, _mm512_mul_ps(GS20, norm2))); //type has speed in it
 				t2 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS11, norm1, _mm512_mul_ps(GS21, norm2))); //reuse t var
 				t3 = _mm512_maskz_mul_ps(comparemask, type, _mm512_fmsub_ps(GS12, norm1, _mm512_mul_ps(GS22, norm2)));
-				_mm512_stream_ps(&movVec[iter], t1); //saves
-				_mm512_stream_ps(&movVec[finalnum + iter], t2);
-				_mm512_stream_ps(&movVec[finalnum2 + iter], t3);
+				_mm512_storenr_ps(&movVec[iter], t1); //saves
+				_mm512_storenr_ps(&movVec[finalnum + iter], t2);
+				_mm512_storenr_ps(&movVec[finalnum2 + iter], t3);
 			}
 		} //so the context of "c" does not overlap
 		#pragma omp for
